@@ -14,8 +14,9 @@ export function useAuth() {
       setUser(session?.user ?? null);
       setReady(true);
     });
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user ?? null);
+    supabase.auth.getUser().then(({ data, error }) => {
+      // a network/server hiccup shouldn't sign the listener out locally
+      if (!error || !data.user) setUser((u) => (error ? u : data.user ?? null));
       setReady(true);
     });
     return () => sub.subscription.unsubscribe();
