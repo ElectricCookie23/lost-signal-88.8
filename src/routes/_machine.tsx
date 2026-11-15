@@ -120,6 +120,11 @@ function Machine() {
     if (auth.user && local?.kind === "signin") setLocal(null);
   }, [auth.user, local]);
   const printOrder = async (ship: Shipping): Promise<string | null> => {
+    // live stock may have already emptied the cart while paying
+    if (!Object.keys(store.cart).length) {
+      setLocal({ kind: "cart" });
+      return null;
+    }
     const r = await placeOrder(store.cart, ship, store.kicked, !!auth.user);
     if (!r.ok) {
       if ("error" in r) return "The machine jammed. Try again.";

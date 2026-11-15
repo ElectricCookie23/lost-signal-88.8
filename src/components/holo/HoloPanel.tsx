@@ -147,7 +147,7 @@ function OrdersView({ signedIn, onBuyAgain }: { signedIn: boolean; onBuyAgain?: 
               <span>QAR {o.total.toFixed(2)}</span>
             </div>
             <div className="holo-order-meta">
-              {fmtDate(o.created_at)} · {o.items.reduce((a, i) => a + i.qty, 0)} items
+              {fmtDate(o.created_at)} · {(() => { const n = o.items.reduce((a, i) => a + i.qty, 0); return `${n} ${n === 1 ? "item" : "items"}`; })()}
             </div>
             <div className="holo-order-thumbs">
               {o.items.map((i) => (
