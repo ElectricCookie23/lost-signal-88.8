@@ -15,6 +15,13 @@
       "when": 1794773939027,
       "tag": "0001_phase4_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794774836299,
+      "tag": "0002_money_two_decimals",
+      "breakpoints": true
     }
   ]
 }

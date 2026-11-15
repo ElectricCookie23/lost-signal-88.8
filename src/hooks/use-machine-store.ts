@@ -295,7 +295,7 @@ export function useMachineStore(userId: string | null = null) {
   const lcdText =
     lcdOverride ??
     (selected && selectedProduct
-      ? `${selected} · QAR ${selectedProduct.price}\n${
+      ? `${selected} · QAR ${selectedProduct.price.toFixed(2)}\n${
           available(selected) === 0
             ? selectedProduct.stock > 0
               ? "IN CART"

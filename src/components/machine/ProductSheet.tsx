@@ -14,7 +14,7 @@ export function ProductSheet({ code, onClose }: { code: string; onClose: () => v
           {hasAlt && <img src={`/hover/${code}.jpg`} alt={`${p.name}, second view`} onError={() => setHasAlt(false)} />}
         </div>
         <p style={{ fontFamily: "VT323, monospace", fontSize: 26, marginTop: 10 }}>
-          {code} · {p.name.toUpperCase()} · QAR {p.price}
+          {code} · {p.name.toUpperCase()} · QAR {p.price.toFixed(2)}
         </p>
         <p style={{ fontSize: 14, opacity: 0.8 }}>{p.description}</p>
         <button type="button" className="btn-secondary" style={{ marginTop: 12 }} onClick={onClose}>

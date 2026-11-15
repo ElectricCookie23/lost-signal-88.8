@@ -302,7 +302,7 @@ function CheckoutView({
           </label>
         </div>
         <div className="holo-acts">
-          <button type="submit" className="btn-primary holo-add flex-1" disabled={paid}>Pay QAR {total}</button>
+          <button type="submit" className="btn-primary holo-add flex-1" disabled={paid}>Pay QAR {total.toFixed(2)}</button>
         </div>
         {paid && (
           <div className="holo-toast">
@@ -361,7 +361,7 @@ function ProductList({ codes, store, onOpen }: { codes: string[]; store: Machine
               </span>
               <span className="holo-list-name">{p.name}</span>
             </span>
-            <span className="holo-price sm">QAR {p.price}</span>
+            <span className="holo-price sm">QAR {p.price.toFixed(2)}</span>
           </button>
         );
       })}
@@ -389,7 +389,7 @@ function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; 
       <div className="holo-lcd holo-code">{code}</div>
       <h2 className="holo-h1">{p.name}</h2>
       <div className="holo-price-row">
-        <span className="holo-price">QAR {p.price}</span>
+        <span className="holo-price">QAR {p.price.toFixed(2)}</span>
         {p.tag && <span className="holo-pill">{p.tag.toUpperCase()}</span>}
       </div>
       <StockLine code={code} store={store} />
@@ -504,7 +504,7 @@ function CartView({ store, onClose, note, onCheckout }: { store: MachineStore; o
             <div className="holo-line-name">
               {c} {p.name.toUpperCase()}
               <small>
-                QAR {p.price} each · {more ? `${more} more available` : "no more in stock"}
+                QAR {p.price.toFixed(2)} each · {more ? `${more} more available` : "no more in stock"}
               </small>
             </div>
             <div className="holo-qty">

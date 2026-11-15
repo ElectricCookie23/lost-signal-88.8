@@ -8,8 +8,14 @@ export function ReceiptPaper({ order, torn }: { order: Order; torn: boolean }) {
   const [h, setH] = useState(0);
   useEffect(() => {
     setH(0);
-    const t = setTimeout(() => setH((inner.current?.scrollHeight ?? 200) + 6), 900);
-    return () => clearTimeout(t);
+    // Paper ends exactly at the inner block, whose bottom padding is the 10px margin.
+    const measure = () => setH(inner.current?.offsetHeight ?? 200);
+    const t = setTimeout(measure, 900);
+    let ro: ResizeObserver | undefined;
+    const t2 = setTimeout(() => {
+      if (inner.current) { ro = new ResizeObserver(measure); ro.observe(inner.current); }
+    }, 900);
+    return () => { clearTimeout(t); clearTimeout(t2); ro?.disconnect(); };
   }, [order.id]);
   return (
     <div className={cn("receipt-paper", torn && "is-torn")} style={{ height: h }} aria-label={`Receipt ${order.order_no}`}>

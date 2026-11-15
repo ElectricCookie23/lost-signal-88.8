@@ -52,7 +52,7 @@ function Slot({
   return (
     <motion.button
       type="button"
-      aria-label={`${product.code} ${product.name}, QAR ${product.price}, ${soldOut ? "sold out" : allInCart ? "all in your cart" : stockLabel(avail).toLowerCase()}`}
+      aria-label={`${product.code} ${product.name}, QAR ${product.price.toFixed(2)}, ${soldOut ? "sold out" : allInCart ? "all in your cart" : stockLabel(avail).toLowerCase()}`}
       aria-pressed={selected}
       disabled={soldOut}
       onClick={() => (selected && isTouch() ? onOpen(product.code) : onSelect(product.code))}
@@ -91,7 +91,7 @@ function Slot({
       </span>
       {hovered && !soldOut && (
         <span className="slot-tip">
-          {product.name.toUpperCase()} · QAR {product.price}
+          {product.name.toUpperCase()} · QAR {product.price.toFixed(2)}
         </span>
       )}
       </span>

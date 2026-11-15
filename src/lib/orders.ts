@@ -26,6 +26,21 @@ export interface Order {
   created_at: string;
 }
 
+/** Round money to 2 decimals. */
+export const money = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+
+/** Prefer the 2-decimal amount columns; fall back to the old whole-riyal ones. */
+function norm(raw: unknown): Order {
+  const o = raw as Order & { subtotal_qar?: number; discount_qar?: number; total_qar?: number };
+  return {
+    ...o,
+    items: (o.items ?? []).map((i) => ({ ...i, price: money(i.price) })),
+    subtotal: money(o.subtotal_qar ?? o.subtotal),
+    discount: money(o.discount_qar ?? o.discount),
+    total: money(o.total_qar ?? o.total),
+  };
+}
+
 const IDS_KEY = "ls888_order_ids";
 const SHIP_KEY = "ls888_ship";
 
@@ -71,7 +86,7 @@ export async function placeOrder(
   const r = data as unknown as { ok: boolean; order?: Order; short?: { code: string; stock: number }[] };
   if (r.ok && r.order) {
     if (!signedIn) write(IDS_KEY, [r.order.id, ...guestOrderIds()].slice(0, 50));
-    return { ok: true, order: r.order };
+    return { ok: true, order: norm(r.order) };
   }
   return { ok: false, short: r.short ?? [] };
 }
@@ -79,12 +94,12 @@ export async function placeOrder(
 export async function fetchOrders(signedIn: boolean): Promise<Order[]> {
   if (signedIn) {
     const { data } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
-    return (data ?? []) as unknown as Order[];
+    return ((data ?? []) as unknown[]).map(norm);
   }
   const ids = guestOrderIds();
   if (!ids.length) return [];
   const { data } = await supabase.rpc("guest_orders", { p_ids: ids });
-  return (data ?? []) as unknown as Order[];
+  return ((data ?? []) as unknown[]).map(norm);
 }
 
 /** After sign-in: attach this device's guest orders that match the account email. */

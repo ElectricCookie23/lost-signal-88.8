@@ -67,12 +67,14 @@ export const CALLS: Record<string, [string, string][]> = {
 
 export const ROW_SLUGS = ["tapes", "wear", "gear", "paper"] as const;
 
-/** Cart math: subtotal, KICKIT 10% discount (rounded to whole QAR), total. */
+/** Cart math: subtotal, KICKIT 10% discount (exactly 10%, rounded to 2 decimals), total. */
 export function cartTotals(cart: Record<string, number>, kicked: boolean) {
   const subtotal = Object.entries(cart).reduce(
     (a, [c, q]) => a + (PRODUCT_BY_CODE[c]?.price ?? 0) * q,
     0,
   );
-  const discount = kicked ? Math.round(subtotal * 0.1) : 0;
-  return { subtotal, discount, total: subtotal - discount };
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const sub = r2(subtotal);
+  const discount = kicked ? r2(sub * 0.1) : 0;
+  return { subtotal: sub, discount, total: r2(sub - discount) };
 }

@@ -56,6 +56,7 @@ export type Database = {
         Row: {
           created_at: string
           discount: number
+          discount_qar: number
           email: string
           id: string
           items: Json
@@ -63,12 +64,15 @@ export type Database = {
           shipping: Json
           status: string
           subtotal: number
+          subtotal_qar: number
           total: number
+          total_qar: number
           user_id: string | null
         }
         Insert: {
           created_at?: string
           discount?: number
+          discount_qar?: number
           email: string
           id?: string
           items?: Json
@@ -76,12 +80,15 @@ export type Database = {
           shipping?: Json
           status?: string
           subtotal?: number
+          subtotal_qar?: number
           total?: number
+          total_qar?: number
           user_id?: string | null
         }
         Update: {
           created_at?: string
           discount?: number
+          discount_qar?: number
           email?: string
           id?: string
           items?: Json
@@ -89,7 +96,9 @@ export type Database = {
           shipping?: Json
           status?: string
           subtotal?: number
+          subtotal_qar?: number
           total?: number
+          total_qar?: number
           user_id?: string | null
         }
         Relationships: []
@@ -282,6 +291,7 @@ export type Database = {
         Returns: {
           created_at: string
           discount: number
+          discount_qar: number
           email: string
           id: string
           items: Json
@@ -289,7 +299,9 @@ export type Database = {
           shipping: Json
           status: string
           subtotal: number
+          subtotal_qar: number
           total: number
+          total_qar: number
           user_id: string | null
         }[]
         SetofOptions: {
