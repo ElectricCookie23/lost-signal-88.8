@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MachineRouteImport } from './routes/_machine'
+import { Route as BoothRouteImport } from './routes/booth'
 import { Route as MachineIndexRouteImport } from './routes/_machine.index'
 import { Route as MachineViewRouteImport } from './routes/_machine.$view'
 
 const MachineRoute = MachineRouteImport.update({
   id: '/_machine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BoothRoute = BoothRouteImport.update({
+  id: '/booth',
+  path: '/booth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MachineIndexRoute = MachineIndexRouteImport.update({
@@ -30,28 +36,32 @@ const MachineViewRoute = MachineViewRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof MachineIndexRoute
+  '/booth': typeof BoothRoute
   '/$view': typeof MachineViewRoute
 }
 export interface FileRoutesByTo {
+  '/booth': typeof BoothRoute
   '/$view': typeof MachineViewRoute
   '/': typeof MachineIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_machine': typeof MachineRouteWithChildren
+  '/booth': typeof BoothRoute
   '/_machine/$view': typeof MachineViewRoute
   '/_machine/': typeof MachineIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$view'
+  fullPaths: '/' | '/booth' | '/$view'
   fileRoutesByTo: FileRoutesByTo
-  to: '/$view' | '/'
-  id: '__root__' | '/_machine' | '/_machine/$view' | '/_machine/'
+  to: '/booth' | '/$view' | '/'
+  id: '__root__' | '/_machine' | '/booth' | '/_machine/$view' | '/_machine/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   MachineRoute: typeof MachineRouteWithChildren
+  BoothRoute: typeof BoothRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -61,6 +71,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof MachineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/booth': {
+      id: '/booth'
+      path: '/booth'
+      fullPath: '/booth'
+      preLoaderRoute: typeof BoothRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_machine/': {
@@ -95,6 +112,7 @@ const MachineRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   MachineRoute: MachineRouteWithChildren,
+  BoothRoute: BoothRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,16 +1,24 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 
 interface TopBarProps {
   cartCount: number;
   savedCount: number;
   onCart?: () => void;
   onSaved?: () => void;
+  liveText: string;
+  userName: string | null;
+  isAdmin?: boolean;
+  onSignIn?: () => void;
+  onSignOut?: () => void;
+  onOrders?: () => void;
 }
 
 /** Fixed top bar: station logo, on-air ticker, and action buttons. */
-export function TopBar({ cartCount, savedCount, onCart, onSaved }: TopBarProps) {
+export function TopBar({ cartCount, savedCount, onCart, onSaved, liveText, userName, isAdmin, onSignIn, onSignOut, onOrders }: TopBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userOpen, setUserOpen] = useState(false);
   return (
     <motion.header
       className="topbar"
@@ -23,7 +31,7 @@ export function TopBar({ cartCount, savedCount, onCart, onSaved }: TopBarProps) 
       </div>
       <div className="topbar-live topbar-desktop">
         <span className="live-dot" aria-hidden />
-        ON AIR · 11 listeners tuned in
+        <span key={liveText} className="topbar-live-text">{liveText}</span>
       </div>
       <div className="topbar-actions topbar-desktop">
         <button type="button" className="btn-secondary" onClick={onSaved}>
@@ -32,7 +40,7 @@ export function TopBar({ cartCount, savedCount, onCart, onSaved }: TopBarProps) 
         <button type="button" className="btn-secondary btn-cart" onClick={onCart}>
           Cart {cartCount}
         </button>
-        <button type="button" className="btn-secondary">
+        <button type="button" className="btn-secondary" onClick={onOrders}>
           Orders
         </button>
         <button type="button" className="btn-secondary">
@@ -41,6 +49,31 @@ export function TopBar({ cartCount, savedCount, onCart, onSaved }: TopBarProps) 
         <button type="button" className="btn-secondary">
           Exit
         </button>
+        {userName ? (
+          <div className="topbar-user">
+            <button
+              type="button"
+              className="btn-secondary is-user"
+              aria-expanded={userOpen}
+              onClick={() => setUserOpen((o) => !o)}
+            >
+              {userName} ▾
+            </button>
+            {userOpen && (
+              <div className="topbar-user-menu" role="menu">
+                <button type="button" role="menuitem" onClick={() => { setUserOpen(false); onOrders?.(); }}>Orders</button>
+                {isAdmin && (
+                  <Link to="/booth" role="menuitem" onClick={() => setUserOpen(false)}>The Booth</Link>
+                )}
+                <button type="button" role="menuitem" onClick={() => { setUserOpen(false); onSignOut?.(); }}>Sign out</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button type="button" className="btn-secondary" onClick={onSignIn}>
+            Sign in
+          </button>
+        )}
       </div>
       <div className="topbar-mobile">
         <button type="button" className="icon-btn" aria-label={`Saved, ${savedCount}`}>

@@ -32,4 +32,7 @@ use the editor.
 <!-- AGENT-MEMORY:BEGIN -->
 - The machine lives in the pathless layout `src/routes/_machine.tsx`; child routes (`_machine.index`, `_machine.$view`) render null and only set the URL/head, so the machine never remounts on navigation.
 - Hologram state: product/row views come from the URL; cart/saved are local panel state cleared on URL change.
+- Live stock is written into the shared `PRODUCT_BY_CODE` records by `useMachineStore` (initial fetch + realtime) and a `stockTick` re-render; static product copy stays in `src/data/products.ts`.
+- Ghost sales and nightly refill are SQL-only pg_cron jobs (`ghost_tick` every minute gated by `station_state.next_ghost_at`; `refill_all` at 17:00 UTC). Admin stock edits go through `admin_set_stock`/`admin_restock_all` RPCs that check `has_role`.
+- Admin role is granted on signup by matching `public.admin_emails`.
 <!-- AGENT-MEMORY:END -->

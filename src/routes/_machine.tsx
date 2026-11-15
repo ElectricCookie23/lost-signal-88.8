@@ -1,6 +1,9 @@
 import { createFileRoute, Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useMachineStore } from "@/hooks/use-machine-store";
+import { useAuth } from "@/hooks/use-auth";
+import { useStation } from "@/hooks/use-station";
+import { supabase } from "@/integrations/supabase/client";
 import { MachineStage } from "@/components/machine/MachineStage";
 import { GlassMenu } from "@/components/machine/GlassMenu";
 import { SlotGrid } from "@/components/machine/SlotGrid";
@@ -42,7 +45,9 @@ function slotPos(code: string) {
 const isMobile = () => typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
 
 function Machine() {
-  const store = useMachineStore();
+  const auth = useAuth();
+  const store = useMachineStore(auth.user?.id ?? null);
+  const station = useStation();
   const navigate = useNavigate();
   const { view } = useParams({ strict: false });
   const urlPanel = parseView(view);
@@ -83,6 +88,14 @@ function Machine() {
     store.clearSelection();
     setLocal({ kind: "cart" });
   };
+  const openPanel = (kind: "signin" | "orders") => {
+    store.clearSelection();
+    setLocal({ kind });
+  };
+  // close the sign-in panel once the magic link lands
+  useEffect(() => {
+    if (auth.user && local?.kind === "signin") setLocal(null);
+  }, [auth.user, local]);
   const openSaved = () => {
     store.clearSelection();
     setLocal({ kind: "saved" });
@@ -140,6 +153,7 @@ function Machine() {
           onOpen={setViewing}
           dimRow={row}
           shake={shake}
+          ticks={store.ticks}
         />
         <Lcd text={store.lcdText} />
         <Keypad selected={store.selected} available={store.available} onSelect={pick} />
@@ -147,7 +161,7 @@ function Machine() {
         <PickupTray items={cartItems} onOpen={openCart} />
         <div className="mobile-ticker" style={{ ...MOBILE_TICKER }}>
           <span className="live-dot" aria-hidden />
-          ON AIR · 11 listeners tuned in
+          {station.text}
         </div>
         {store.faller && <Faller faller={store.faller} onDone={store.completeFall} />}
       </MachineStage>
@@ -160,6 +174,9 @@ function Machine() {
         onOpenProduct={openProduct}
         onOpenCart={openCart}
         onAdd={(code, qty) => store.addToTray(slotPos(code), code, qty)}
+        email={auth.user?.email ?? null}
+        signedIn={!!auth.user}
+        onSignIn={() => openPanel("signin")}
       />
       <MobileDock
         lcdText={store.lcdText}
@@ -176,6 +193,12 @@ function Machine() {
         savedCount={store.saved.length}
         onCart={openCart}
         onSaved={openSaved}
+        liveText={station.text}
+        userName={auth.name}
+        isAdmin={auth.isAdmin}
+        onSignIn={() => openPanel("signin")}
+        onOrders={() => openPanel("orders")}
+        onSignOut={() => void supabase.auth.signOut()}
       />
       <Outlet />
     </div>

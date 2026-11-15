@@ -2,12 +2,15 @@ import { useEffect, useState } from "react";
 import { CALLS, PRODUCT_BY_CODE, ROW_NAMES, cartTotals, type RowLetter } from "@/data/products";
 import type { MachineStore } from "@/hooks/use-machine-store";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 export type Panel =
   | { kind: "product"; code: string }
   | { kind: "row"; row: number }
   | { kind: "cart" }
-  | { kind: "saved" };
+  | { kind: "saved" }
+  | { kind: "signin" }
+  | { kind: "orders" };
 
 interface HoloPanelProps {
   panel: Panel | null;
@@ -16,6 +19,146 @@ interface HoloPanelProps {
   onOpenProduct: (code: string) => void;
   onOpenCart: () => void;
   onAdd: (code: string, qty: number) => void;
+  email?: string | null | undefined;
+  signedIn?: boolean;
+  onSignIn?: (() => void) | undefined;
+}
+
+function NotifyMe({ code, email }: { code: string; email?: string | null | undefined }) {
+  const [value, setValue] = useState(email ?? "");
+  const [state, setState] = useState<"idle" | "busy" | "done" | "err">("idle");
+  useEffect(() => {
+    setValue(email ?? "");
+    setState("idle");
+  }, [code, email]);
+  if (state === "done") return <div className="holo-stock ok">● You're on the list for {code}.</div>;
+  return (
+    <form
+      className="holo-acts holo-notify"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const v = value.trim();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) || v.length > 254) {
+          setState("err");
+          return;
+        }
+        setState("busy");
+        const { error } = await supabase.from("restock_alerts").insert({ email: v, code });
+        setState(error ? "err" : "done");
+      }}
+    >
+      <input
+        className="holo-input"
+        type="email"
+        placeholder="you@email.com"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        aria-label="Email for restock alert"
+      />
+      <button type="submit" className="btn-primary holo-add" disabled={state === "busy"}>
+        Notify me<span className="holo-sub">when it's back</span>
+      </button>
+      {state === "err" && <div className="holo-toast w-full">Check that email and try again.</div>}
+    </form>
+  );
+}
+
+function SignInView() {
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<"idle" | "busy" | "sent" | "err">("idle");
+  const [msg, setMsg] = useState("");
+  return (
+    <>
+      <div className="holo-lcd text-[20px]">LISTENER LIST</div>
+      <h2 className="holo-h1">Get on the list.</h2>
+      <div className="holo-dash" />
+      {state === "sent" ? (
+        <p className="holo-copy mt-3.5">Link sent to {email}. Open it on this device to tune in.</p>
+      ) : (
+        <form
+          className="holo-signin"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const v = email.trim();
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) {
+              setState("err");
+              setMsg("That doesn't look like an email.");
+              return;
+            }
+            setState("busy");
+            const { error } = await supabase.auth.signInWithOtp({
+              email: v,
+              options: { emailRedirectTo: window.location.origin },
+            });
+            if (error) {
+              setState("err");
+              setMsg(error.message);
+            } else setState("sent");
+          }}
+        >
+          <input
+            className="holo-input"
+            type="email"
+            placeholder="you@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-label="Email"
+            autoFocus
+          />
+          <button type="submit" className="btn-primary holo-add" disabled={state === "busy"}>
+            {state === "busy" ? "Sending…" : "Send magic link"}
+          </button>
+          <p className="holo-copy">We'll email you a link. No passwords, no spam.</p>
+          {state === "err" && <div className="holo-toast">{msg}</div>}
+        </form>
+      )}
+    </>
+  );
+}
+
+interface OrderRow {
+  order_no: string;
+  total: number;
+  status: string;
+  created_at: string;
+}
+
+function OrdersView({ signedIn, onSignIn }: { signedIn: boolean; onSignIn?: (() => void) | undefined }) {
+  const [orders, setOrders] = useState<OrderRow[] | null>(null);
+  useEffect(() => {
+    if (!signedIn) return;
+    supabase
+      .from("orders")
+      .select("order_no, total, status, created_at")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setOrders(data ?? []));
+  }, [signedIn]);
+  return (
+    <>
+      <h2 className="holo-h1">Orders</h2>
+      <div className="holo-dash" />
+      {!signedIn ? (
+        <>
+          <p className="holo-copy my-3.5">Sign in to see your orders.</p>
+          <button type="button" className="btn-secondary holo-big" onClick={onSignIn}>Sign in</button>
+        </>
+      ) : orders == null ? (
+        <p className="holo-lcd mt-3.5">LOADING…</p>
+      ) : orders.length === 0 ? (
+        <p className="holo-copy mt-3.5">No orders yet. The tray is waiting.</p>
+      ) : (
+        orders.map((o) => (
+          <div key={o.order_no} className="holo-line">
+            <div className="holo-line-name">
+              {o.order_no}
+              <small>{new Date(o.created_at).toLocaleDateString()} · {o.status.toUpperCase()}</small>
+            </div>
+            <span className="holo-line-total">QAR {o.total}</span>
+          </div>
+        ))
+      )}
+    </>
+  );
 }
 
 function StockLine({ code, store }: { code: string; store: MachineStore }) {
@@ -56,7 +199,7 @@ function ProductList({ codes, store, onOpen }: { codes: string[]; store: Machine
   );
 }
 
-function ProductView({ code, store, onAdd, onOpenCart }: { code: string; store: MachineStore; onAdd: HoloPanelProps["onAdd"]; onOpenCart: () => void }) {
+function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; store: MachineStore; onAdd: HoloPanelProps["onAdd"]; onOpenCart: () => void; email?: string | null | undefined }) {
   const p = PRODUCT_BY_CODE[code];
   const [qty, setQty] = useState(1);
   const [photo, setPhoto] = useState<"main" | "hover">("main");
@@ -97,6 +240,16 @@ function ProductView({ code, store, onAdd, onOpenCart }: { code: string; store: 
         </div>
       </div>
       <p className="holo-copy">{p.description}</p>
+      {p.stock === 0 ? (
+        <>
+          <NotifyMe code={code} email={email} />
+          <div className="holo-acts">
+            <button type="button" className="btn-secondary holo-save" onClick={() => store.toggleSave(code)}>
+              {saved ? "♥ SAVED" : "♡ SAVE"}
+            </button>
+          </div>
+        </>
+      ) : (
       <div className="holo-acts">
         <div className="holo-qty">
           <button type="button" aria-label="Less" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
@@ -120,6 +273,7 @@ function ProductView({ code, store, onAdd, onOpenCart }: { code: string; store: 
           {saved ? "♥ SAVED" : "♡ SAVE"}
         </button>
       </div>
+      )}
       <div className="holo-toast">
         {added && !store.faller && (
           <>
@@ -160,11 +314,15 @@ function CartView({ store, onClose }: { store: MachineStore; onClose: () => void
     );
   }
   const { subtotal, discount, total } = cartTotals(store.cart, store.kicked);
+  const goneBeaten = Object.keys(store.beaten).filter((c) => !store.cart[c]);
   return (
     <>
       <h2 className="holo-h1">Your cart</h2>
       <div className="holo-lcd text-[18px]">LOST SIGNAL 88.8 · STAIRWELL MACHINE #2</div>
       <div className="holo-dash" />
+      {goneBeaten.map((c) => (
+        <div key={c} className="holo-beaten">{c} {PRODUCT_BY_CODE[c]?.name}: someone beat you to it. Only 0 left.</div>
+      ))}
       {lines.map(([c, n]) => {
         const p = PRODUCT_BY_CODE[c];
         if (!p) return null;
@@ -184,6 +342,9 @@ function CartView({ store, onClose }: { store: MachineStore; onClose: () => void
               <button type="button" aria-label="Add one" disabled={!more} onClick={() => store.setQty(c, n + 1)}>+</button>
             </div>
             <span className="holo-line-total">{(p.price * n).toFixed(2)}</span>
+            {store.beaten[c] != null && (
+              <div className="holo-beaten">Someone beat you to it. Only {store.beaten[c]} left.</div>
+            )}
           </div>
         );
       })}
@@ -208,7 +369,7 @@ function CartView({ store, onClose }: { store: MachineStore; onClose: () => void
 }
 
 /** The floating hologram panel on the right (desktop). */
-export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, onAdd }: HoloPanelProps) {
+export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, onAdd, email, signedIn = false, onSignIn }: HoloPanelProps) {
   // keep last content while closing so it fades out instead of blanking
   const [shown, setShown] = useState<Panel | null>(panel);
   const [flick, setFlick] = useState(0);
@@ -242,7 +403,7 @@ export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, on
         [X]
       </button>
       {p?.kind === "product" && (
-        <ProductView code={p.code} store={store} onAdd={onAdd} onOpenCart={onOpenCart} />
+        <ProductView code={p.code} store={store} onAdd={onAdd} onOpenCart={onOpenCart} email={email} />
       )}
       {p?.kind === "row" && (
         <>
@@ -262,6 +423,8 @@ export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, on
         </>
       )}
       {p?.kind === "cart" && <CartView store={store} onClose={onClose} />}
+      {p?.kind === "signin" && <SignInView />}
+      {p?.kind === "orders" && <OrdersView signedIn={signedIn} onSignIn={onSignIn} />}
     </aside>
   );
 }

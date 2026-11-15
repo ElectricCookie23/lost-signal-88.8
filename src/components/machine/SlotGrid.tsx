@@ -11,6 +11,7 @@ interface SlotGridProps {
   onOpen: (code: string) => void;
   dimRow?: number | null;
   shake?: { code: string; tick: number } | null;
+  ticks?: Record<string, number>;
 }
 
 function isTouch() {
@@ -30,7 +31,9 @@ function Slot({
   onOpen,
   dim,
   shakeTick,
+  tick,
 }: {
+  tick: number;
   dim: boolean;
   shakeTick: number;
   product: Product;
@@ -82,7 +85,7 @@ function Slot({
         <img className="slot-hover-img" src={`/hover/${product.code}.jpg`} alt="" draggable={false} />
       </span>
       {soldOut && <span className="soldout-stamp">SOLD OUT</span>}
-      <span className="slot-chip">
+      <span key={`chip-${tick}`} className={cn("slot-chip", tick > 0 && "is-tick")}>
         <b>{product.code}</b>
         <i className={cn(avail <= 3 && "low")}>{allInCart ? "IN CART" : stockLabel(avail)}</i>
       </span>
@@ -96,7 +99,7 @@ function Slot({
   );
 }
 
-export function SlotGrid({ selected, available, onSelect, onOpen, dimRow = null, shake = null }: SlotGridProps) {
+export function SlotGrid({ selected, available, onSelect, onOpen, dimRow = null, shake = null, ticks = {} }: SlotGridProps) {
   // Remount the grid once on first paint so the drop-in stagger plays after
   // the stage image has had a chance to load.
   const [ready, setReady] = useState(false);
@@ -116,6 +119,7 @@ export function SlotGrid({ selected, available, onSelect, onOpen, dimRow = null,
           onOpen={onOpen}
           dim={dimRow != null && i >= 0 && Math.floor(i / 4) !== dimRow}
           shakeTick={shake?.code === p.code ? shake.tick : 0}
+          tick={ticks[p.code] ?? 0}
         />
       ))}
     </>
