@@ -1,17 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 const DESC =
-  "A pirate radio station's merch store where the whole website is a vending machine. Tapes, wear, gear and paper — broadcasting 8pm to 6am.";
+  "A pirate radio station that only broadcasts at night, selling its merch from a beat-up vending machine. Limited stock. Open after dark.";
 
 export const Route = createFileRoute("/_machine/")({
   head: () => ({
     meta: [
-      { title: "Lost Signal 88.8 — The Machine" },
+      { title: "Lost Signal 88.8 · Pirate radio merch from the vending machine" },
       { name: "description", content: DESC },
-      { property: "og:title", content: "Lost Signal 88.8 — The Machine" },
+      { property: "og:title", content: "Lost Signal 88.8 · Pirate radio merch from the vending machine" },
       { property: "og:description", content: DESC },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:image", content: "https://lost-signal-blackout.lovable.app/og-image.jpg" },
+      { name: "twitter:image", content: "https://lost-signal-blackout.lovable.app/og-image.jpg" },
     ],
   }),
   component: () => null,

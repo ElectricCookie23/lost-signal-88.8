@@ -10,3 +10,5 @@
 - [x] Phase 5: intro, exit, night/day, sound, radio
 - [x] Pre-phase-6 fixes: slim top bar, pocket radio, sticky product actions, tooltips, cart lines, intro timing, bigger note, beam
 - [x] Extra interactivity: dial tuner, lock-in, intro static handoff, flashlight, secret code, receipt QR, spatial hum, no voice lines
+- [ ] Phase 6: navigator, extra pages, footer, publishing details, full mobile, polish
+- [ ] After phase 6: list every feature → test each → error log → fix all → one more quick pass

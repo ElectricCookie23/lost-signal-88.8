@@ -3,15 +3,16 @@ import { GLASS_MENU } from "@/lib/machine-layout";
 import { cn } from "@/lib/utils";
 
 const ROWS = ["TAPES", "WEAR", "GEAR", "PAPER"];
-const STUBS = ["STATION", "NIGHT LOG", "REQUEST LINE"];
+const STUBS = [["STATION", "station"], ["NIGHT LOG", "night-log"], ["REQUEST LINE", "request-line"]] as const;
 
 interface GlassMenuProps {
   activeRow: number | null;
   onRow: (row: number) => void;
+  onPage?: (view: string) => void;
 }
 
 /** The glowing menu printed on the machine glass. */
-export function GlassMenu({ activeRow, onRow }: GlassMenuProps) {
+export function GlassMenu({ activeRow, onRow, onPage }: GlassMenuProps) {
   return (
     <motion.nav
       aria-label="Machine menu"
@@ -34,10 +35,10 @@ export function GlassMenu({ activeRow, onRow }: GlassMenuProps) {
         ))}
       </div>
       <div className="glass-menu-sub">
-        {STUBS.map((name, i) => (
+        {STUBS.map(([name, slug], i) => (
           <span key={name} className="flex items-center gap-[18px]">
             {i > 0 && <span className="opacity-50">·</span>}
-            <button type="button" className="glass-menu-sub-item" disabled>
+            <button type="button" className="glass-menu-sub-item" onClick={() => onPage?.(slug)}>
               {name}
             </button>
           </span>

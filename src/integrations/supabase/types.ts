@@ -154,6 +154,33 @@ export type Database = {
         }
         Relationships: []
       }
+      requests: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          topic: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          message?: string
+          name: string
+          topic: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          topic?: string
+        }
+        Relationships: []
+      }
       restock_alerts: {
         Row: {
           code: string
@@ -253,6 +280,24 @@ export type Database = {
         Update: {
           id?: number
           next_ghost_at?: string
+        }
+        Relationships: []
+      }
+      subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
         }
         Relationships: []
       }

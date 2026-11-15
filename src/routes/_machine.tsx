@@ -17,7 +17,9 @@ import { PickupTray } from "@/components/machine/PickupTray";
 import { Faller } from "@/components/machine/Faller";
 import { Atmosphere } from "@/components/machine/Atmosphere";
 import { MobileDock } from "@/components/machine/MobileDock";
-import { ProductSheet } from "@/components/machine/ProductSheet";
+import { Navigator } from "@/components/nav/Navigator";
+import { Footer } from "@/components/nav/Footer";
+import { PAGE_SLUGS, type PageName } from "@/data/pages";
 import { HoloPanel, type Panel } from "@/components/holo/HoloPanel";
 import { Beam } from "@/components/holo/Beam";
 import { TopBar } from "@/components/TopBar";
@@ -42,6 +44,7 @@ export function parseView(view: string | undefined): Panel | null {
   const v = view.toLowerCase();
   const row = (ROW_SLUGS as readonly string[]).indexOf(v);
   if (row >= 0) return { kind: "row", row };
+  if ((PAGE_SLUGS as string[]).includes(v)) return { kind: "page", name: v as PageName };
   const code = v.toUpperCase();
   if (PRODUCT_BY_CODE[code]) return { kind: "product", code };
   return null;
@@ -63,7 +66,7 @@ function Machine() {
   const { view, no } = useParams({ strict: false }) as { view?: string; no?: string };
   const urlPanel: Panel | null = no ? { kind: "orders", highlight: no.toUpperCase() } : parseView(view);
   const [local, setLocal] = useState<Panel | null>(null);
-  const [viewing, setViewing] = useState<string | null>(null);
+  const [navOpen, setNavOpen] = useState(false);
   const [kicks, setKicks] = useState(0);
   const [shake, setShake] = useState<{ code: string; tick: number } | null>(null);
 
@@ -127,9 +130,10 @@ function Machine() {
     if (panel?.kind !== "cart") setCartNote(null);
   }, [panel?.kind]);
   // opening any panel drops a finished receipt
+  const openKey = panel ? `${panel.kind}:${"code" in panel ? panel.code : "row" in panel ? panel.row : "name" in panel ? panel.name : ""}` : null;
   useEffect(() => {
-    if (panel) setReceipt(null);
-  }, [panel]);
+    if (openKey) setReceipt(null);
+  }, [openKey]);
   useEffect(() => {
     if (auth.user) void claimGuestOrders();
   }, [auth.user]);
@@ -161,6 +165,7 @@ function Machine() {
     store.clearSelection();
     setLocal({ kind: "cart" });
   };
+  const goHome = () => { setLocal(null); store.clearSelection(); setNavOpen(false); };
   const openPanel = (kind: "signin" | "orders" | "checkout") => {
     store.clearSelection();
     setLocal({ kind });
@@ -430,19 +435,20 @@ function Machine() {
   );
 
   return (
-    <div className="min-h-screen overflow-hidden bg-background text-foreground">
+    <div className={`min-h-screen overflow-hidden bg-background text-foreground${navOpen ? " nav-dim" : ""}${panel ? " has-panel" : ""}`}>
       <MachineStage mode={mode} row={row} rattle={rattle} intro={intro} duration={camDur} bright={bright * (onAir || phase === "on" || phase === "boot" ? 1 : 0.4)} uiOn={uiOn} offAir={!onAir}>
         <SignDark visible={!onAir || !lit || glitch} />
         <OutOfOrderNote fallen={noteFallen && onAir} />
         <GlassMenu
           activeRow={row}
           onRow={(r) => navigate({ to: "/$view", params: { view: ROW_SLUGS[r] ?? "tapes" } })}
+          onPage={(v) => navigate({ to: "/$view", params: { view: v } })}
         />
         <SlotGrid
           selected={store.selected}
           available={store.available}
           onSelect={pick}
-          onOpen={setViewing}
+          onOpen={openProduct}
           dimRow={row}
           shake={shake}
           ticks={store.ticks}
@@ -500,23 +506,39 @@ function Machine() {
         onAdd={handleAdd}
         onSave={store.toggleSave}
       />
-      {viewing && <ProductSheet code={viewing} onClose={() => setViewing(null)} />}
+
       <TopBar
         cartCount={store.cartCount}
         savedCount={store.saved.length}
         onCart={openCart}
         onSaved={openSaved}
-        userName={auth.name}
-        isAdmin={auth.isAdmin}
-        onSignIn={() => openPanel("signin")}
-        onOrders={() => openPanel("orders")}
-        onSignOut={() => void supabase.auth.signOut()}
+        onMenu={() => setNavOpen(true)}
+        menuOpen={navOpen}
+        onHome={goHome}
         hidden={!barOn}
         onAir={onAir}
+      />
+      <Footer hidden={!barOn} onOrders={() => openPanel("orders")} onJoin={() => { store.clearSelection(); setLocal({ kind: "page", name: "join" }); }} />
+      <Navigator
+        open={navOpen && phase === "on"}
+        onClose={() => setNavOpen(false)}
+        onHome={goHome}
+        onCart={openCart}
+        onSaved={openSaved}
+        onOrders={() => openPanel("orders")}
+        onSignIn={() => openPanel("signin")}
+        onSignOut={() => void supabase.auth.signOut()}
+        onSound={toggleSound}
         onToggleAir={toggleAir}
         onExit={leave}
+        onJoin={() => { store.clearSelection(); setLocal({ kind: "page", name: "join" }); }}
+        cartCount={store.cartCount}
+        savedCount={store.saved.length}
+        available={store.available}
+        userName={auth.name}
+        isAdmin={auth.isAdmin}
         muted={muted}
-        onSound={toggleSound}
+        onAir={onAir}
       />
       <PocketRadio hidden={!barOn} listeners={station.listeners} events={station.events} />
       <Gate

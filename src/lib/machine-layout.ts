@@ -58,16 +58,18 @@ export interface ScreenArea {
 /** The part of the screen a view should fit into. */
 export function targetArea(mode: CameraMode, vw: number, vh: number, mobile: boolean): ScreenArea {
   const topBar = mobile ? 52 : 56;
+  // phones: a product/row/page sheet covers the bottom 70%; machine stays visible above it
+  if (mobile && (mode === "focus" || mode === "row")) return { x: 0, y: topBar, w: vw, h: Math.max(80, vh * 0.3 - topBar) };
   if (mobile) return { x: 0, y: topBar, w: vw, h: vh - topBar - MOBILE_DOCK_H };
   if (mode === "wide") {
     // whole machine incl. sign below the 48px bar, clear of the pocket radio (bottom-left 276x72)
     const y = 52;
-    const h = vh - y - 8;
+    const h = vh - y - 48; // above the 40px footer
     const [, , w, ih] = viewRect("wide", null, false);
     const s = Math.min(vw / w, h / ih);
     const left = (vw - w * s) / 2;
     if (left >= 284) return { x: 0, y, w: vw, h };
-    return { x: 0, y, w: vw, h: vh - y - 80 };
+    return { x: 0, y, w: vw, h: vh - y - 128 }; // clear of the radio sitting on the footer
   }
   if (mode === "receipt") {
     return { x: 0, y: topBar, w: vw, h: vh - topBar };
@@ -75,10 +77,10 @@ export function targetArea(mode: CameraMode, vw: number, vh: number, mobile: boo
   if (mobile) {
     return { x: 0, y: 44, w: vw, h: vh * 0.36 - 44 };
   }
-  // focus/row: left 58% of the screen, right side reserved for the hologram (phase 2)
+  // focus/row: left 58% (above the footer) of the screen, right side reserved for the hologram (phase 2)
   // hologram: right 2.5vw, width min(600, 40vw); keep a 24px gap to its left edge
   const right = Math.min(600, vw * 0.4) + vw * 0.025 + 72; // room for the visible beam
-  return { x: 0, y: 64, w: vw - right, h: vh - 64 - 22 };
+  return { x: 0, y: 64, w: vw - right, h: vh - 64 - 50 };
 }
 
 export interface Camera {

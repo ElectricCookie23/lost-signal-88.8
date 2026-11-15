@@ -32,6 +32,8 @@ function Booth() {
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [err, setErr] = useState("");
   const [checked, setChecked] = useState(false);
+  const [reqs, setReqs] = useState<{ id: string; name: string; email: string; topic: string; message: string; created_at: string }[]>([]);
+  const [subs, setSubs] = useState<{ id: string; email: string; created_at: string }[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -47,6 +49,8 @@ function Booth() {
       .select("code, name, stock, base_stock")
       .order("sort_order")
       .then(({ data }) => setRows(data ?? []));
+    supabase.from("requests").select("*").order("created_at", { ascending: false }).limit(200).then(({ data }) => setReqs(data ?? []));
+    supabase.from("subscribers").select("*").order("created_at", { ascending: false }).limit(500).then(({ data }) => setSubs(data ?? []));
     const ch = supabase
       .channel(`booth-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "products" }, (p) => {
@@ -131,6 +135,26 @@ function Booth() {
           </button>
         </div>
         {err && <div className="holo-toast">{err}</div>}
+        <div className="holo-dash" />
+        <h2 className="holo-h1 text-[22px]">Request line ({reqs.length})</h2>
+        {reqs.length === 0 ? <p className="holo-copy">No messages yet.</p> : (
+          <ul className="booth-list">
+            {reqs.map((r) => (
+              <li key={r.id}>
+                <div className="holo-lcd">{new Date(r.created_at).toLocaleString("en-GB")} · {r.topic.toUpperCase()}</div>
+                <div><b>{r.name}</b> · {r.email}</div>
+                {r.message && <p className="holo-copy">{r.message}</p>}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="holo-dash" />
+        <h2 className="holo-h1 text-[22px]">Subscribers ({subs.length})</h2>
+        {subs.length === 0 ? <p className="holo-copy">Nobody on the list yet.</p> : (
+          <ul className="booth-list">
+            {subs.map((r) => <li key={r.id}><span className="holo-lcd">{new Date(r.created_at).toLocaleDateString("en-GB")}</span> {r.email}</li>)}
+          </ul>
+        )}
       </>
     );
 

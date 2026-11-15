@@ -29,6 +29,13 @@
       "when": 1794776485386,
       "tag": "0003_secret_code_bonus",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794777529538,
+      "tag": "0004_requests_and_subscribers",
+      "breakpoints": true
     }
   ]
 }

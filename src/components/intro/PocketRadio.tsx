@@ -18,6 +18,7 @@ export function PocketRadio({
 }) {
   const [on, setOn] = useState(false);
   const [open, setOpen] = useState(false);
+  const [card, setCard] = useState(false);
   const [i, setI] = useState(0);
   const [flash, setFlash] = useState(false);
   useEffect(() => onAudioChange(() => setOn(isRadioOn())), []);
@@ -43,7 +44,8 @@ export function PocketRadio({
   const text = lines[i % lines.length] ?? lines[0];
 
   return (
-    <div className={cn("pocket", hidden && "is-hidden", on && "is-on", open && "is-open")} aria-hidden={hidden}>
+    <div className={cn("pocket", hidden && "is-hidden", on && "is-on", open && "is-open", card && "is-card")} aria-hidden={hidden}>
+      <button type="button" className="pocket-fab" aria-label={card ? "Hide radio" : "Show radio"} aria-expanded={card} onClick={() => setCard((c) => !c)}>88.8</button>
       {open && (
         <ul className="pocket-log" aria-label="Last events">
           {events.length ? events.map((e) => <li key={e.id}>{e.text}</li>) : <li>No sales yet tonight.</li>}

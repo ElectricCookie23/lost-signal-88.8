@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchOrders, fmtDate, lastShipping, rememberShipping, type Order, type Shipping } from "@/lib/orders";
 import { downloadReceipt } from "@/lib/receipt-pdf";
+import { HoloHero, PageView } from "@/components/holo/Pages";
+import { HEROES, PAGE_TITLES, type PageName } from "@/data/pages";
 
 export type Panel =
   | { kind: "product"; code: string }
@@ -13,7 +15,8 @@ export type Panel =
   | { kind: "saved" }
   | { kind: "signin" }
   | { kind: "orders"; highlight?: string }
-  | { kind: "checkout" };
+  | { kind: "checkout" }
+  | { kind: "page"; name: PageName };
 
 interface HoloPanelProps {
   panel: Panel | null;
@@ -401,6 +404,10 @@ function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; 
       <StockLine code={code} store={store} />
       <div className="holo-gal">
         <img className="holo-gal-main" src={src} alt={p.name} />
+        <div className="holo-swipe" aria-label="Photos, swipe">
+          <img src={`/products/${code}.jpg`} alt={p.name} />
+          <img src={`/hover/${code}.jpg`} alt={`${p.name}, in the wild`} loading="lazy" />
+        </div>
         <div className="holo-gal-th">
           {(["main", "hover"] as const).map((k) => (
             <button
@@ -575,8 +582,16 @@ export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, on
       key={flick}
       className={cn("holo", panel && "is-on")}
       aria-hidden={!panel}
-      aria-label="Product hologram"
+      role="dialog"
+      aria-label={p ? panelLabel(p) : "Hologram"}
+      tabIndex={-1}
+      ref={(el) => { if (el && panel && !el.contains(document.activeElement)) el.focus({ preventScroll: true }); }}
     >
+      <div className="holo-handle" aria-hidden onPointerDown={(e) => {
+        const y0 = e.clientY;
+        const up = (ev: PointerEvent) => { window.removeEventListener("pointerup", up); if (ev.clientY - y0 > 60) onClose(); };
+        window.addEventListener("pointerup", up);
+      }} />
       <button type="button" className="holo-x" onClick={onClose} aria-label="Close">
         [X]
       </button>
@@ -585,6 +600,7 @@ export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, on
       )}
       {p?.kind === "row" && (
         <>
+          <HoloHero src={HEROES[`row${p.row}`] ?? ""} alt={ROW_NAMES[("ABCD"[p.row] ?? "A") as RowLetter]} />
           <div className="holo-lcd text-[20px]">ROW {"ABCD"[p.row]}</div>
           <h2 className="holo-h1">{ROW_NAMES[("ABCD"[p.row] ?? "A") as RowLetter]}</h2>
           <ProductList codes={[1, 2, 3, 4].map((i) => `${"ABCD"[p.row]}${i}`)} store={store} onOpen={onOpenProduct} />
@@ -592,6 +608,7 @@ export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, on
       )}
       {p?.kind === "saved" && (
         <>
+          <HoloHero src={HEROES["saved"] ?? ""} alt="Saved items" />
           <h2 className="holo-h1">Saved</h2>
           {store.saved.length ? (
             <ProductList codes={store.saved} store={store} onOpen={onOpenProduct} />
@@ -600,6 +617,13 @@ export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, on
           )}
         </>
       )}
+      {p?.kind === "page" && (
+        <>
+          {HEROES[p.name] && <HoloHero src={HEROES[p.name] ?? ""} alt={PAGE_TITLES[p.name]} />}
+          <PageView name={p.name} />
+        </>
+      )}
+      {p?.kind === "cart" && <HoloHero src={HEROES["cart"] ?? ""} alt="Your cart" />}
       {p?.kind === "cart" && <CartView store={store} onClose={onClose} note={cartNote} onCheckout={onCheckout} />}
       {p?.kind === "checkout" && (
         <CheckoutView store={store} email={email} userName={userName} onRattle={onRattle} onPrint={onPrint} />
@@ -608,4 +632,11 @@ export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, on
       {p?.kind === "orders" && <OrdersView signedIn={signedIn} onBuyAgain={onBuyAgain} highlight={p.highlight} />}
     </aside>
   );
+}
+
+function panelLabel(p: Panel) {
+  if (p.kind === "product") return `${p.code} ${PRODUCT_BY_CODE[p.code]?.name ?? ""}`;
+  if (p.kind === "row") return ROW_NAMES[("ABCD"[p.row] ?? "A") as RowLetter];
+  if (p.kind === "page") return PAGE_TITLES[p.name];
+  return { cart: "Cart", saved: "Saved", signin: "Sign in", orders: "Orders", checkout: "Checkout" }[p.kind];
 }
