@@ -1264,3 +1264,12 @@
   .dial-needle { transition-duration: 0.01s; }
   .radio.is-on .radio-np span, .radio.is-on .radio-meter i, .onair-badge { animation: none; }
 }
+
+/* hover tip: name (up to 2 lines) + price on its own line, never clipped */
+.slot-tip {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  width: 168px; max-width: 168px; white-space: normal; text-align: center;
+  line-height: 0.95; padding: 3px 6px; text-overflow: clip;
+}
+.slot-tip-name { font-size: 17px; overflow-wrap: anywhere; }
+.slot-tip-price { font-size: 17px; color: var(--ls-orange); }

@@ -99,7 +99,8 @@ function Slot({
       </span>
       {hovered && !soldOut && (
         <span className="slot-tip">
-          {product.name.toUpperCase()} · QAR {product.price.toFixed(2)}
+          <span className="slot-tip-name">{product.name.toUpperCase()}</span>
+          <span className="slot-tip-price">QAR {product.price.toFixed(2)}</span>
         </span>
       )}
       </span>
