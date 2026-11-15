@@ -275,13 +275,45 @@ export type Database = {
         Args: { _code: string; _stock: number }
         Returns: undefined
       }
+      claim_orders: { Args: { p_ids: string[] }; Returns: number }
       ghost_tick: { Args: never; Returns: undefined }
+      guest_orders: {
+        Args: { p_ids: string[] }
+        Returns: {
+          created_at: string
+          discount: number
+          email: string
+          id: string
+          items: Json
+          order_no: string
+          shipping: Json
+          status: string
+          subtotal: number
+          total: number
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      place_order: {
+        Args: {
+          p_email: string
+          p_items: Json
+          p_kicked: boolean
+          p_shipping: Json
+        }
+        Returns: Json
       }
       refill_all: { Args: never; Returns: undefined }
     }

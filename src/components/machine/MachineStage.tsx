@@ -25,6 +25,7 @@ interface MachineStageProps {
   mode: CameraMode;
   row: number | null;
   children: ReactNode;
+  rattle?: number;
 }
 
 /**
@@ -32,7 +33,7 @@ interface MachineStageProps {
  * coordinates. The whole stage is scaled/translated by the "camera" so
  * overlays always line up with the photo at any screen size.
  */
-export function MachineStage({ mode, row, children }: MachineStageProps) {
+export function MachineStage({ mode, row, children, rattle = 0 }: MachineStageProps) {
   const { w, h } = useViewport();
   const mobile = w <= 760;
   const cam: Camera = computeCamera(mode, row, w, h, mobile);
@@ -57,6 +58,7 @@ export function MachineStage({ mode, row, children }: MachineStageProps) {
           animate={{ x: cam.tx, y: cam.ty, scale: cam.s }}
           transition={{ duration: 0.9, ease: EASE }}
         >
+          <div key={rattle} className={rattle ? "stage-rattle" : undefined} style={{ position: "absolute", inset: 0 }}>
           <img
             src="/machine/machine-empty.jpg"
             alt="The Lost Signal 88.8 vending machine in a dark corridor"
@@ -64,6 +66,7 @@ export function MachineStage({ mode, row, children }: MachineStageProps) {
             draggable={false}
           />
           {children}
+          </div>
         </motion.div>
       </div>
     </>

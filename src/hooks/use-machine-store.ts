@@ -332,6 +332,7 @@ export function useMachineStore(userId: string | null = null) {
     completeFall,
     toggleSave,
     clearSelection,
+    clearCart: () => setCart({}),
   };
 }
 
