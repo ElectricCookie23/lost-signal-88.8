@@ -410,6 +410,27 @@ function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; 
         </div>
       </div>
       <p className="holo-copy">{p.description}</p>
+      {calls.length > 0 && (
+        <div className="holo-calls">
+          {calls.map(([t, q]) => (
+            <p key={t}>
+              <b>CALLER FROM {t.toUpperCase()}</b>
+              <br />"{q}"
+            </p>
+          ))}
+        </div>
+      )}
+      <div className="holo-sticky">
+      <div className="holo-toast">
+        {added && !store.faller && (
+          <>
+            Added to cart.{" "}
+            <button type="button" className="holo-link" onClick={onOpenCart}>
+              View cart ({store.cartCount}) →
+            </button>
+          </>
+        )}
+      </div>
       {p.stock === 0 ? (
         <>
           <NotifyMe code={code} email={email} />
@@ -444,26 +465,7 @@ function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; 
         </button>
       </div>
       )}
-      <div className="holo-toast">
-        {added && !store.faller && (
-          <>
-            Added to cart.{" "}
-            <button type="button" className="holo-link" onClick={onOpenCart}>
-              View cart ({store.cartCount}) →
-            </button>
-          </>
-        )}
       </div>
-      {calls.length > 0 && (
-        <div className="holo-calls">
-          {calls.map(([t, q]) => (
-            <p key={t}>
-              <b>CALLER FROM {t.toUpperCase()}</b>
-              <br />"{q}"
-            </p>
-          ))}
-        </div>
-      )}
     </>
   );
 }
@@ -502,7 +504,7 @@ function CartView({ store, onClose, note, onCheckout }: { store: MachineStore; o
           <div key={c} className="holo-line">
             <img src={`/products/${c}.jpg`} alt="" />
             <div className="holo-line-name">
-              {c} {p.name.toUpperCase()}
+              <span className="nm">{c} {p.name.toUpperCase()}</span>
               <small>
                 QAR {p.price.toFixed(2)} each · {more ? `${more} more available` : "no more in stock"}
               </small>

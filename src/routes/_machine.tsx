@@ -22,6 +22,7 @@ import { HoloPanel, type Panel } from "@/components/holo/HoloPanel";
 import { Beam } from "@/components/holo/Beam";
 import { TopBar } from "@/components/TopBar";
 import { Gate, SignalLost } from "@/components/intro/Gate";
+import { PocketRadio } from "@/components/intro/PocketRadio";
 import { StaticOverlay } from "@/components/intro/StaticOverlay";
 import { OutOfOrderNote, SignDark } from "@/components/intro/MachineExtras";
 import { useOnAir } from "@/hooks/use-on-air";
@@ -207,17 +208,18 @@ function Machine() {
     setTimeout(() => setCartNote(missing.length ? `Sold out now: ${missing.join(", ")}.` : null), 0);
   };
   /** Fluorescent-tube flicker: [wait, on, off, brightness] steps, then fully lit. */
-  const flicker = (pat: number[][], done: () => void) => {
+  const flicker = (pat: number[][], done: () => void, dimTo = 0.08) => {
     if (reduced.current) { setBright(1); later(done, 600); return; }
     let t = 0;
     for (const [w = 0, on = 0, off = 0, b = 1] of pat) {
       t += w; later(() => { setBright(b); click(0.3 + b * 0.2); }, t);
-      t += on; later(() => setBright(0.08), t);
+      t += on; later(() => setBright(dimTo), t);
       t += off;
     }
     later(() => { setBright(1); click(0.6); done(); }, t);
   };
-  const FULL = [[400, 70, 380, 0.55], [0, 40, 140, 0.35], [0, 110, 650, 0.8], [0, 50, 90, 0.5], [0, 60, 250, 0.7], [0, 170, 140, 0.9], [0, 40, 420, 0.6]];
+  // ~1.5s, seven uneven flashes
+  const FULL = [[120, 50, 160, 0.55], [0, 30, 70, 0.35], [0, 80, 280, 0.8], [0, 40, 60, 0.5], [0, 45, 120, 0.7], [0, 110, 80, 0.9], [0, 30, 170, 0.6]];
   const FAST = [[100, 60, 120, 0.6], [0, 80, 200, 0.85]];
 
   const boot = (fast: boolean) => {
@@ -227,25 +229,26 @@ function Machine() {
     try { localStorage.setItem("ls888_visits", String(v)); } catch { /* blocked */ }
     setPhase("boot"); setLocal(null); setReceipt(null); store.clearSelection();
     setNoteFallen(false); setUiOn(false); setSlotsIn(false); setBarOn(false); setLit(false);
-    setBright(0.08); setStaticOp(0); setHazeOn(false);
+    setBright(fast ? 0.08 : 0.25); setStaticOp(0); setHazeOn(false);
     const glide = !fast && !reduced.current;
-    if (glide) { setIntro(true); later(() => { setCamDur(2.6); setIntro(false); }, 60); }
+    if (glide) { setIntro(true); later(() => { setCamDur(1.8); setIntro(false); }, 60); }
     else setCamDur(reduced.current ? 0 : 0.9);
     later(() => {
       const tube: Voice | null = play("flicker", { vol: 0.9 });
       flicker(fast ? FAST : FULL, () => {
         fadeOut(tube, 1.4);
         setLit(true); setHumming(true); setHazeOn(true); setNoteFallen(true); click(0.4);
-        later(() => {
+        {
           setUiOn(true);
           store.flashLcd(v > 1 ? "WELCOME\nBACK" : "HELLO\nNIGHT OWL", 1800);
           const step = fast ? 0.04 : 0.09;
           setDropStep(step); setBootKey((k) => k + 1); setSlotsIn(true);
           for (let i = 3; i < 16; i += 4) later(() => play("drop", { vol: 0.25 }), i * step * 1000 + 250);
-          later(() => { setBarOn(true); setPhase("on"); setCamDur(0.9); }, 16 * step * 1000 + 300);
-        }, fast ? 200 : 700);
-      });
-    }, glide ? 2700 : 300);
+          setBarOn(true);
+          later(() => { setPhase("on"); setCamDur(0.9); }, 16 * step * 1000 + 300);
+        }
+      }, fast ? 0.08 : 0.25);
+    }, glide ? 1900 : 300);
   };
 
   const tuneIn = async (slide: () => void) => {
@@ -257,7 +260,7 @@ function Machine() {
       if (++i > 6) clearInterval(iv);
     }, 230);
     slide();
-    later(() => { setStaticOp(0); boot(false); }, 1800);
+    later(() => { setStaticOp(0); boot(false); }, 1600);
   };
   const skipIntro = async () => { await unlock(); boot(true); };
 
@@ -402,6 +405,7 @@ function Machine() {
           loaded={slotsIn}
           step={dropStep}
           bootKey={bootKey}
+          tipKey={`${mode}:${row}:${panel?.kind ?? ""}:${receipt ? 1 : 0}`}
         />
         <Lcd text={lcdText} />
         <Keypad selected={store.selected} available={store.available} onSelect={pick} />
@@ -456,7 +460,6 @@ function Machine() {
         savedCount={store.saved.length}
         onCart={openCart}
         onSaved={openSaved}
-        liveText={station.text}
         userName={auth.name}
         isAdmin={auth.isAdmin}
         onSignIn={() => openPanel("signin")}
@@ -469,6 +472,7 @@ function Machine() {
         muted={muted}
         onSound={toggleSound}
       />
+      <PocketRadio hidden={!barOn} listeners={station.listeners} events={station.events} />
       <Gate
         hidden={phase !== "gate"}
         welcome={visits > 0 ? `Welcome back, night owl.${store.cartCount ? ` Your cart still has ${store.cartCount} item${store.cartCount > 1 ? "s" : ""}.` : ""}` : null}

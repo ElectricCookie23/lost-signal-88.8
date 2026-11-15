@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { PRODUCTS, type Product } from "@/data/products";
 import { SLOT_COLS, SLOT_H, SLOT_ROWS, SLOT_W } from "@/lib/machine-layout";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,8 @@ interface SlotGridProps {
   step?: number;
   /** Changes on every boot so the drop replays. */
   bootKey?: number;
+  /** Changes whenever the camera moves or a panel opens; hides the tooltip. */
+  tipKey?: string;
 }
 
 function isTouch() {
@@ -39,7 +41,11 @@ function Slot({
   shakeTick,
   tick,
   step,
+  hovered,
+  setHovered,
 }: {
+  hovered: boolean;
+  setHovered: (code: string | null) => void;
   step: number;
   tick: number;
   dim: boolean;
@@ -55,7 +61,6 @@ function Slot({
   const row = Math.floor(index / 4);
   const soldOut = product.stock === 0;
   const allInCart = !soldOut && avail === 0;
-  const [hovered, setHovered] = useState(false);
 
   return (
     <motion.button
@@ -64,8 +69,8 @@ function Slot({
       aria-pressed={selected}
       disabled={soldOut}
       onClick={() => (selected && isTouch() ? onOpen(product.code) : onSelect(product.code))}
-      onMouseEnter={() => !isTouch() && setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => !isTouch() && setHovered(product.code)}
+      onMouseLeave={() => setHovered(null)}
       className={cn(
         "machine-slot group",
         selected && "is-selected",
@@ -108,7 +113,12 @@ function Slot({
   );
 }
 
-export function SlotGrid({ selected, available, onSelect, onOpen, dimRow = null, shake = null, ticks = {}, loaded = true, step = 0.09, bootKey = 0 }: SlotGridProps) {
+export function SlotGrid({ selected, available, onSelect, onOpen, dimRow = null, shake = null, ticks = {}, loaded = true, step = 0.09, bootKey = 0, tipKey = "" }: SlotGridProps) {
+  const [hover, setHoverRaw] = useState<string | null>(null);
+  // while the camera glides, slots slide under a still cursor: ignore those enters
+  const [blockUntil, setBlockUntil] = useState(0);
+  useEffect(() => { setHoverRaw(null); setBlockUntil(Date.now() + 1000); }, [tipKey]);
+  const setHover = (c: string | null) => { if (c === null || Date.now() > blockUntil) setHoverRaw(c); };
   if (!loaded) return null;
 
   return (
@@ -126,6 +136,8 @@ export function SlotGrid({ selected, available, onSelect, onOpen, dimRow = null,
           shakeTick={shake?.code === p.code ? shake.tick : 0}
           tick={ticks[p.code] ?? 0}
           step={step}
+          hovered={hover === p.code}
+          setHovered={setHover}
         />
       ))}
     </Fragment>

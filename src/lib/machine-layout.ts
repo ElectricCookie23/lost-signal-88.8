@@ -59,7 +59,17 @@ export interface ScreenArea {
 export function targetArea(mode: CameraMode, vw: number, vh: number, mobile: boolean): ScreenArea {
   const topBar = mobile ? 52 : 56;
   if (mobile) return { x: 0, y: topBar, w: vw, h: vh - topBar - MOBILE_DOCK_H };
-  if (mode === "wide" || mode === "receipt") {
+  if (mode === "wide") {
+    // whole machine incl. sign below the 48px bar, clear of the pocket radio (bottom-left 276x72)
+    const y = 52;
+    const h = vh - y - 8;
+    const [, , w, ih] = viewRect("wide", null, false);
+    const s = Math.min(vw / w, h / ih);
+    const left = (vw - w * s) / 2;
+    if (left >= 284) return { x: 0, y, w: vw, h };
+    return { x: 0, y, w: vw, h: vh - y - 80 };
+  }
+  if (mode === "receipt") {
     return { x: 0, y: topBar, w: vw, h: vh - topBar };
   }
   if (mobile) {
@@ -67,7 +77,7 @@ export function targetArea(mode: CameraMode, vw: number, vh: number, mobile: boo
   }
   // focus/row: left 58% of the screen, right side reserved for the hologram (phase 2)
   // hologram: right 2.5vw, width min(600, 40vw); keep a 24px gap to its left edge
-  const right = Math.min(600, vw * 0.4) + vw * 0.025 + 24;
+  const right = Math.min(600, vw * 0.4) + vw * 0.025 + 72; // room for the visible beam
   return { x: 0, y: 64, w: vw - right, h: vh - 64 - 22 };
 }
 
@@ -93,7 +103,7 @@ export function computeCamera(
   const a = targetArea(mode, vw, vh, mobile);
   let s = Math.min(a.w / w, a.h / h);
   // only the wide view must cover the viewport; focus/row may shrink onto the backdrop
-  const cover = !mobile && (mode === "wide" || mode === "receipt");
+  const cover = !mobile && mode === "receipt";
   if (cover) s = Math.max(s, vw / STAGE_W, vh / STAGE_H);
   let tx = a.x + (a.w - w * s) / 2 - x * s;
   // phones: top-align right under the top bar; leftover space shows the backdrop

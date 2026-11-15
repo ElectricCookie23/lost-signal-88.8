@@ -8,6 +8,8 @@ const DEFAULT_LINE = "ON AIR";
 export function useStation() {
   const [listeners, setListeners] = useState(1);
   const [line, setLine] = useState<string | null>(null);
+  /** Last 5 sale/restock lines, newest first, with an id that bumps per event. */
+  const [events, setEvents] = useState<{ id: number; text: string }[]>([]);
 
   useEffect(() => {
     const key = Math.random().toString(36).slice(2);
@@ -31,11 +33,12 @@ export function useStation() {
         setTimeout(() => {
           const n = PRODUCT_BY_CODE[e.code]?.stock ?? 0;
           const left = n <= 3 ? `${n} left` : `${n} in`;
-          setLine(
+          const t =
             e.kind === "sale"
               ? `Someone in ${e.area ?? "Doha"} just took ${e.code} ${p.name} · ${left}`
-              : `Restock: ${e.code} ${p.name} is back · ${n} in`,
-          );
+              : `Restock: ${e.code} ${p.name} is back · ${n} in`;
+          setLine(t);
+          setEvents((ev) => [{ id: Date.now(), text: t }, ...ev].slice(0, 5));
         }, 400);
         if (clear) clearTimeout(clear);
         clear = setTimeout(() => setLine(null), 12000);
@@ -50,5 +53,5 @@ export function useStation() {
   }, []);
 
   const text = line ?? `${DEFAULT_LINE} · ${listeners} ${listeners === 1 ? "listener" : "listeners"} tuned in`;
-  return { listeners, text };
+  return { listeners, text, events };
 }

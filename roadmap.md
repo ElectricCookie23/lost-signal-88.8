@@ -8,3 +8,4 @@
 - [x] Commit
 - [x] Phase 2: hologram, product/row/cart/saved views, URLs, jammed C4
 - [x] Phase 5: intro, exit, night/day, sound, radio
+- [x] Pre-phase-6 fixes: slim top bar, pocket radio, sticky product actions, tooltips, cart lines, intro timing, bigger note, beam

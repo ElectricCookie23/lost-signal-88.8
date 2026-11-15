@@ -37,7 +37,7 @@ export function Beam({ open }: { open: boolean }) {
           <stop offset="1" stopColor="var(--ls-glow)" stopOpacity="0.06" />
         </linearGradient>
       </defs>
-      <polygon ref={poly} style={{ transition: "opacity 0.25s" }} fill="url(#beam-g)" points="0,0 0,0 0,0" />
+      <polygon ref={poly} style={{ transition: "opacity 0.25s", filter: "drop-shadow(0 0 6px rgba(91,176,165,0.6))" }} fill="url(#beam-g)" points="0,0 0,0 0,0" />
     </svg>
   );
 }
