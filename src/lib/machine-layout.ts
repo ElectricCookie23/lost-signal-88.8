@@ -34,7 +34,12 @@ export function viewRect(mode: CameraMode, row: number | null, mobile: boolean):
   // phones: glass (menu strip + 4x4 slots + tray) spans the full screen width
   if (mobile) return [858, 25, 862, 1090]; // sign → tray + ticker
   if (mode === "receipt") return mobile ? [1700, 700, 230, 300] : [1650, 690, 360, 340];
-  if (mode === "row" && row != null) return [860, (SLOT_ROWS[row] ?? 0) - 70, 1100, 310];
+  if (mode === "row" && row != null) {
+    // glass only (x860, w780): menu strip + row A, or just the row for B–D
+    const top = SLOT_ROWS[row] ?? 0;
+    if (row === 0) return [860, 150, 780, top + 186 - 150];
+    return [860, top - 60, 780, 246];
+  }
   // focus: whole machine incl. control panel (to x≈1960)
   if (mode === "focus") return [740, 0, 1225, 1152];
   return mobile ? [860, 250, 780, 700] : [740, 0, 1210, 1152];

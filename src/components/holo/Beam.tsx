@@ -13,9 +13,12 @@ export function Beam({ open }: { open: boolean }) {
       if (stage && holo && poly.current) {
         const s = stage.getBoundingClientRect();
         const k = s.width / STAGE_W;
-        const px = s.left + 1800 * k;
+        const px = s.left + 1950 * k;
         const py = s.top + 480 * k;
         const r = holo.getBoundingClientRect();
+        // control panel off screen (e.g. row zoom): hide the beam
+        const visible = px >= 0 && px < r.left && py >= 0 && py <= window.innerHeight;
+        poly.current.style.opacity = visible ? "1" : "0";
         poly.current.setAttribute(
           "points",
           `${px},${py} ${r.left + 2},${r.top + 18} ${r.left + 2},${r.bottom - 2}`,
@@ -34,7 +37,7 @@ export function Beam({ open }: { open: boolean }) {
           <stop offset="1" stopColor="var(--ls-glow)" stopOpacity="0.06" />
         </linearGradient>
       </defs>
-      <polygon ref={poly} fill="url(#beam-g)" points="0,0 0,0 0,0" />
+      <polygon ref={poly} style={{ transition: "opacity 0.25s" }} fill="url(#beam-g)" points="0,0 0,0 0,0" />
     </svg>
   );
 }
