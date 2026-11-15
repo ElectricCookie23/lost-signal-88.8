@@ -1533,3 +1533,19 @@
 .booth-list { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 10px; } .booth-list li { border-bottom: 1px solid rgba(91,176,165,0.2); padding-bottom: 8px; }
 @media (min-width: 761px) { .holo { bottom: 52px; } }
 .holo-x { position: relative; z-index: 4; }
+.holo-x { margin-bottom: -44px; }
+.holo-hero + * { clear: both; }
+@media (max-width: 760px) {
+  .receipt-after {
+    left: 8px !important; right: 8px; top: auto !important; bottom: calc(92px + 10px); width: auto;
+    flex-direction: row; flex-wrap: wrap; gap: 6px; z-index: 41;
+  }
+  .receipt-after > button { flex: 1 1 0; min-height: 44px; font-size: 13px; padding: 6px 4px; }
+  .receipt-after .holo-sub { display: none; }
+  .receipt-after .receipt-note { flex-basis: 100%; text-align: center; font-size: 16px; }
+}
+@media (max-width: 760px) { .receipt-after .receipt-note { padding-left: 56px; text-align: left; } }
+@media (max-width: 760px) {
+  .topbar-logo { min-height: 44px; display: inline-flex; flex-direction: column; justify-content: center; }
+  .mobile-dock button { min-height: 44px; }
+}

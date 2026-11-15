@@ -32,8 +32,9 @@ export type CameraMode = "wide" | "focus" | "row" | "receipt";
 
 export function viewRect(mode: CameraMode, row: number | null, mobile: boolean): [number, number, number, number] {
   // phones: glass (menu strip + 4x4 slots + tray) spans the full screen width
+  if (mobile && mode === "receipt") return [1680, 700, 270, 420]; // printer slot + paper
   if (mobile) return [858, 25, 862, 1090]; // sign → tray + ticker
-  if (mode === "receipt") return mobile ? [1700, 700, 230, 300] : [1650, 690, 360, 340];
+  if (mode === "receipt") return [1650, 690, 360, 340];
   if (mode === "row" && row != null) {
     // glass only (x860, w780): menu strip + row A, or just the row for B–D
     const top = SLOT_ROWS[row] ?? 0;
@@ -59,6 +60,8 @@ export interface ScreenArea {
 export function targetArea(mode: CameraMode, vw: number, vh: number, mobile: boolean): ScreenArea {
   const topBar = mobile ? 52 : 56;
   // phones: a product/row/page sheet covers the bottom 70%; machine stays visible above it
+  // phones: receipt zooms onto the printer slot, leaving a strip for the three buttons
+  if (mobile && mode === "receipt") return { x: 0, y: topBar, w: vw, h: vh - topBar - MOBILE_DOCK_H - 96 };
   if (mobile && (mode === "focus" || mode === "row")) return { x: 0, y: topBar, w: vw, h: Math.max(80, vh * 0.3 - topBar) };
   if (mobile) return { x: 0, y: topBar, w: vw, h: vh - topBar - MOBILE_DOCK_H };
   if (mode === "wide") {
