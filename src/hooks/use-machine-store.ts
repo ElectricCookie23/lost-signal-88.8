@@ -4,6 +4,7 @@ import type { CameraMode } from "@/lib/machine-layout";
 
 const CART_KEY = "ls888_cart";
 const SAVED_KEY = "ls888_saved";
+const KICKED_KEY = "ls888_kicked";
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -17,6 +18,7 @@ function load<T>(key: string, fallback: T): T {
 export interface Faller {
   code: string;
   from: { x: number; y: number };
+  qty: number;
   id: number;
 }
 
@@ -28,6 +30,7 @@ export function useMachineStore() {
   const [row, setRow] = useState<number | null>(null);
   const [lcdOverride, setLcdOverride] = useState<string | null>(null);
   const [faller, setFaller] = useState<Faller | null>(null);
+  const [kicked, setKicked] = useState<boolean>(() => load(KICKED_KEY, false));
   const lcdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fallerId = useRef(0);
 
@@ -46,6 +49,14 @@ export function useMachineStore() {
       /* storage full or blocked */
     }
   }, [saved]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(KICKED_KEY, JSON.stringify(kicked));
+    } catch {
+      /* storage blocked */
+    }
+  }, [kicked]);
 
   const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
 
@@ -83,17 +94,18 @@ export function useMachineStore() {
   }, []);
 
   const addToTray = useCallback(
-    (slotPos: { x: number; y: number }) => {
-      if (!selected) {
+    (slotPos: { x: number; y: number }, code: string | null = selected, qty = 1) => {
+      if (!code) {
         flashLcd("PICK A\nSLOT FIRST");
         return;
       }
-      if (available(selected) === 0) {
-        flashLcd(`${selected}\nSOLD OUT`);
+      if (available(code) === 0) {
+        flashLcd(`${code}\nSOLD OUT`);
         return;
       }
       fallerId.current += 1;
-      setFaller({ code: selected, from: slotPos, id: fallerId.current });
+      const n = Math.max(1, Math.min(qty, available(code)));
+      setFaller({ code, from: slotPos, qty: n, id: fallerId.current });
     },
     [selected, available, flashLcd],
   );
@@ -103,21 +115,33 @@ export function useMachineStore() {
     setFaller((f) => {
       if (f && !completedFalls.current.has(f.id)) {
         completedFalls.current.add(f.id);
-        setCart((c) => ({ ...c, [f.code]: (c[f.code] ?? 0) + 1 }));
+        setCart((c) => ({ ...c, [f.code]: (c[f.code] ?? 0) + f.qty }));
       }
       return null;
     });
   }, []);
 
-  const toggleSave = useCallback(() => {
-    if (!selected) {
+  const setQty = useCallback((code: string, qty: number) => {
+    setCart((c) => {
+      const max = PRODUCT_BY_CODE[code]?.stock ?? 0;
+      const n = Math.max(0, Math.min(max, qty));
+      const next = { ...c };
+      if (n === 0) delete next[code];
+      else next[code] = n;
+      return next;
+    });
+  }, []);
+
+  const toggleSave = useCallback((target?: string) => {
+    const selected_ = typeof target === "string" ? target : selected;
+    if (!selected_) {
       flashLcd("PICK A\nSLOT FIRST");
       return;
     }
     setSaved((s) => {
-      const has = s.includes(selected);
-      flashLcd(has ? `${selected}\nUNSAVED` : `${selected}\nSAVED ♥`);
-      return has ? s.filter((c) => c !== selected) : [...s, selected];
+      const has = s.includes(selected_);
+      flashLcd(has ? `${selected_}\nUNSAVED` : `${selected_}\nSAVED ♥`);
+      return has ? s.filter((c) => c !== selected_) : [...s, selected_];
     });
   }, [selected, flashLcd]);
 
@@ -148,6 +172,11 @@ export function useMachineStore() {
     lcdText,
     faller,
     cartCount,
+    kicked,
+    setKicked,
+    setQty,
+    flashLcd,
+    setSelected,
     available,
     select,
     goWide,

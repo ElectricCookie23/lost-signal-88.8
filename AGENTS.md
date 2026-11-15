@@ -28,3 +28,8 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+<!-- AGENT-MEMORY:BEGIN -->
+- The machine lives in the pathless layout `src/routes/_machine.tsx`; child routes (`_machine.index`, `_machine.$view`) render null and only set the URL/head, so the machine never remounts on navigation.
+- Hologram state: product/row views come from the URL; cart/saved are local panel state cleared on URL change.
+<!-- AGENT-MEMORY:END -->

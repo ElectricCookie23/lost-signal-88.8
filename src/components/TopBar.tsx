@@ -4,10 +4,12 @@ import { useState } from "react";
 interface TopBarProps {
   cartCount: number;
   savedCount: number;
+  onCart?: () => void;
+  onSaved?: () => void;
 }
 
 /** Fixed top bar: station logo, on-air ticker, and action buttons. */
-export function TopBar({ cartCount, savedCount }: TopBarProps) {
+export function TopBar({ cartCount, savedCount, onCart, onSaved }: TopBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <motion.header
@@ -24,10 +26,10 @@ export function TopBar({ cartCount, savedCount }: TopBarProps) {
         ON AIR · 11 listeners tuned in
       </div>
       <div className="topbar-actions topbar-desktop">
-        <button type="button" className="btn-secondary">
+        <button type="button" className="btn-secondary" onClick={onSaved}>
           ♥ Saved {savedCount}
         </button>
-        <button type="button" className="btn-secondary btn-cart">
+        <button type="button" className="btn-secondary btn-cart" onClick={onCart}>
           Cart {cartCount}
         </button>
         <button type="button" className="btn-secondary">

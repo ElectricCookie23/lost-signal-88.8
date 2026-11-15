@@ -50,6 +50,7 @@ export function MachineStage({ mode, row, children }: MachineStageProps) {
       />
       <div className="fixed inset-0 overflow-hidden">
         <motion.div
+          id="machine-stage"
           className="absolute left-0 top-0"
           style={{ width: STAGE_W, height: STAGE_H, transformOrigin: "0 0" }}
           initial={false}

@@ -48,3 +48,31 @@ export const ROW_NAMES: Record<RowLetter, string> = {
   C: "GEAR",
   D: "PAPER",
 };
+
+/** Listener call-ins shown under a product: [time, quote]. */
+export const CALLS: Record<string, [string, string][]> = {
+  B1: [["2:14am", "Best hoodie I own. Wore it to a wedding. Nobody stopped me."]],
+  A1: [["3:03am", "Fell asleep to side B. Woke up to the DJ snoring. 10/10."]],
+  C2: [["11:42pm", "The antenna does nothing and I love it."]],
+  C4: [
+    ["1:20am", "My roommate knocks now. The lamp works."],
+    ["10:31pm", "Kicked the machine. Got a discount. Felt powerful."],
+  ],
+  A3: [["12:07am", "Bought the tape player. Now I need tapes. Now I need more tapes. Send help."]],
+  D3: [["2:58am", "The zine taught me to build an antenna out of a coat hanger. My landlord is upset."]],
+  D4: [["4:45am", "Found the parking lot. Can confirm. Perfect signal."]],
+  B3: [["5:12am", "Wore the jacket on a night shift. Three people asked where it was from."]],
+  C1: [["1:01am", "Tried tuning to other stations. He was right. Don't."]],
+};
+
+export const ROW_SLUGS = ["tapes", "wear", "gear", "paper"] as const;
+
+/** Cart math: subtotal, KICKIT 10% discount (rounded to whole QAR), total. */
+export function cartTotals(cart: Record<string, number>, kicked: boolean) {
+  const subtotal = Object.entries(cart).reduce(
+    (a, [c, q]) => a + (PRODUCT_BY_CODE[c]?.price ?? 0) * q,
+    0,
+  );
+  const discount = kicked ? Math.round(subtotal * 0.1) : 0;
+  return { subtotal, discount, total: subtotal - discount };
+}

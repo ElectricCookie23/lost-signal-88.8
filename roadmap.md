@@ -6,4 +6,4 @@
 - [x] Match look to uploaded guide images (UI_Guide.png, full.png, mobile.png)
 - [x] Verify overlay alignment at 1440x900 and 390px phone (1920x1080 uses same cover math)
 - [x] Commit
-- [ ] Phase 2 (not started): hologram product panel, cart view
+- [x] Phase 2: hologram, product/row/cart/saved views, URLs, jammed C4

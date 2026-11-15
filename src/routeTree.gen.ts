@@ -9,50 +9,92 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as MachineRouteImport } from './routes/_machine'
+import { Route as MachineIndexRouteImport } from './routes/_machine.index'
+import { Route as MachineViewRouteImport } from './routes/_machine.$view'
 
-const IndexRoute = IndexRouteImport.update({
+const MachineRoute = MachineRouteImport.update({
+  id: '/_machine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MachineIndexRoute = MachineIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => MachineRoute,
+} as any)
+const MachineViewRoute = MachineViewRouteImport.update({
+  id: '/$view',
+  path: '/$view',
+  getParentRoute: () => MachineRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof MachineIndexRoute
+  '/$view': typeof MachineViewRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/$view': typeof MachineViewRoute
+  '/': typeof MachineIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_machine': typeof MachineRouteWithChildren
+  '/_machine/$view': typeof MachineViewRoute
+  '/_machine/': typeof MachineIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/$view'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/$view' | '/'
+  id: '__root__' | '/_machine' | '/_machine/$view' | '/_machine/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  MachineRoute: typeof MachineRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_machine': {
+      id: '/_machine'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof MachineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_machine/': {
+      id: '/_machine/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof MachineIndexRouteImport
+      parentRoute: typeof MachineRoute
+    }
+    '/_machine/$view': {
+      id: '/_machine/$view'
+      path: '/$view'
+      fullPath: '/$view'
+      preLoaderRoute: typeof MachineViewRouteImport
+      parentRoute: typeof MachineRoute
     }
   }
 }
 
+interface MachineRouteChildren {
+  MachineViewRoute: typeof MachineViewRoute
+  MachineIndexRoute: typeof MachineIndexRoute
+}
+
+const MachineRouteChildren: MachineRouteChildren = {
+  MachineViewRoute: MachineViewRoute,
+  MachineIndexRoute: MachineIndexRoute,
+}
+
+const MachineRouteWithChildren =
+  MachineRoute._addFileChildren(MachineRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  MachineRoute: MachineRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

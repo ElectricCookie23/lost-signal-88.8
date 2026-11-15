@@ -9,6 +9,8 @@ interface SlotGridProps {
   available: (code: string) => number;
   onSelect: (code: string) => void;
   onOpen: (code: string) => void;
+  dimRow?: number | null;
+  shake?: { code: string; tick: number } | null;
 }
 
 function isTouch() {
@@ -26,7 +28,11 @@ function Slot({
   avail,
   onSelect,
   onOpen,
+  dim,
+  shakeTick,
 }: {
+  dim: boolean;
+  shakeTick: number;
   product: Product;
   index: number;
   selected: boolean;
@@ -48,7 +54,12 @@ function Slot({
       onClick={() => (selected && isTouch() ? onOpen(product.code) : onSelect(product.code))}
       onMouseEnter={() => !isTouch() && setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className={cn("machine-slot group", selected && "is-selected", soldOut && "is-soldout")}
+      className={cn(
+        "machine-slot group",
+        selected && "is-selected",
+        soldOut && "is-soldout",
+        dim && "is-dim",
+      )}
       style={{
         left: SLOT_COLS[col],
         top: SLOT_ROWS[row],
@@ -64,6 +75,7 @@ function Slot({
         damping: 19,
       }}
     >
+      <span key={shakeTick} className={cn("slot-shake", shakeTick > 0 && "is-shaking")}>
       <span className="slot-photo">
         <img src={`/products/${product.code}.jpg`} alt="" draggable={false} />
         <img className="slot-hover-img" src={`/hover/${product.code}.jpg`} alt="" draggable={false} />
@@ -78,11 +90,12 @@ function Slot({
           {product.name.toUpperCase()} · QAR {product.price}
         </span>
       )}
+      </span>
     </motion.button>
   );
 }
 
-export function SlotGrid({ selected, available, onSelect, onOpen }: SlotGridProps) {
+export function SlotGrid({ selected, available, onSelect, onOpen, dimRow = null, shake = null }: SlotGridProps) {
   // Remount the grid once on first paint so the drop-in stagger plays after
   // the stage image has had a chance to load.
   const [ready, setReady] = useState(false);
@@ -100,6 +113,8 @@ export function SlotGrid({ selected, available, onSelect, onOpen }: SlotGridProp
           avail={available(p.code)}
           onSelect={onSelect}
           onOpen={onOpen}
+          dim={dimRow != null && i >= 0 && Math.floor(i / 4) !== dimRow}
+          shakeTick={shake?.code === p.code ? shake.tick : 0}
         />
       ))}
     </>
