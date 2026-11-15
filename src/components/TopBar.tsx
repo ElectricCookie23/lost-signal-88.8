@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { RadioPlayer } from "@/components/intro/RadioPlayer";
+import { cn } from "@/lib/utils";
 
 interface TopBarProps {
   cartCount: number;
@@ -13,22 +15,32 @@ interface TopBarProps {
   onSignIn?: () => void;
   onSignOut?: () => void;
   onOrders?: () => void;
+  hidden?: boolean;
+  onAir?: boolean;
+  onToggleAir?: () => void;
+  onExit?: () => void;
+  muted?: boolean;
+  onSound?: () => void;
 }
 
 /** Fixed top bar: station logo, on-air ticker, and action buttons. */
-export function TopBar({ cartCount, savedCount, onCart, onSaved, liveText, userName, isAdmin, onSignIn, onSignOut, onOrders }: TopBarProps) {
+export function TopBar({ cartCount, savedCount, onCart, onSaved, liveText, userName, isAdmin, onSignIn, onSignOut, onOrders, hidden = false, onAir = true, onToggleAir, onExit, muted = false, onSound }: TopBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   return (
     <motion.header
-      className="topbar"
+      className={cn("topbar", hidden && "is-hidden")}
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.8, delay: 0.2 }}
+      animate={{ opacity: hidden ? 0 : 1 }}
+      transition={{ duration: 0.8 }}
     >
       <div className="topbar-logo">
         LOST SIGNAL <b>88.8</b>
       </div>
+      <div className={cn("onair-badge topbar-desktop", !onAir && "is-off")}>
+        {onAir ? "● ON AIR" : "○ OFF AIR · back at 8pm"}
+      </div>
+      <div className="topbar-desktop"><RadioPlayer /></div>
       <div className="topbar-live topbar-desktop">
         <span className="live-dot" aria-hidden />
         <span key={liveText} className="topbar-live-text">{liveText}</span>
@@ -43,10 +55,13 @@ export function TopBar({ cartCount, savedCount, onCart, onSaved, liveText, userN
         <button type="button" className="btn-secondary" onClick={onOrders}>
           Orders
         </button>
-        <button type="button" className="btn-secondary">
-          Sound on
+        <button type="button" className="btn-secondary btn-sm" onClick={onToggleAir}>
+          {onAir ? "Back to daylight" : "Skip to tonight"}
         </button>
-        <button type="button" className="btn-secondary">
+        <button type="button" className="btn-secondary" aria-pressed={!muted} onClick={onSound}>
+          {muted ? "Sound off" : "Sound on"}
+        </button>
+        <button type="button" className="btn-secondary" onClick={onExit}>
           Exit
         </button>
         {userName ? (
@@ -93,8 +108,12 @@ export function TopBar({ cartCount, savedCount, onCart, onSaved, liveText, userN
         </button>
         {menuOpen && (
           <div className="mobile-menu" role="menu">
-            {["Orders", "Sound on", "Exit"].map((l) => (
-              <button key={l} type="button" role="menuitem" onClick={() => setMenuOpen(false)}>
+            {([
+              ["Orders", onOrders],
+              [muted ? "Sound off" : "Sound on", onSound],
+              ["Exit", onExit],
+            ] as const).map(([l, f]) => (
+              <button key={l} type="button" role="menuitem" onClick={() => { setMenuOpen(false); f?.(); }}>
                 {l}
               </button>
             ))}

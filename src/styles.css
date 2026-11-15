@@ -1154,3 +1154,113 @@
 }
 .receipt-after.is-on { opacity: 1; pointer-events: auto; }
 .receipt-note { font-family: VT323, monospace; font-size: 18px; color: var(--ls-static); }
+
+/* ---------- Phase 5: intro, exit, night/day, sound ---------- */
+.ui-off .machine-lcd,
+.ui-off nav[aria-label="Machine menu"] { opacity: 0 !important; }
+.machine-lcd, nav[aria-label="Machine menu"] { transition: opacity 0.6s; }
+
+.topbar.is-hidden { pointer-events: none; }
+
+.static-overlay {
+  position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 60;
+  pointer-events: none; image-rendering: pixelated; mix-blend-mode: screen;
+  transition: opacity 0.5s;
+}
+
+.gate {
+  position: fixed; inset: 0; z-index: 55; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 24px; padding: 20px;
+  background: var(--ls-black); transition: opacity 0.9s;
+}
+.gate.is-hidden { opacity: 0; pointer-events: none; }
+.gate-lost { z-index: 70; background: rgba(5, 14, 8, 0.55); }
+.gate-title {
+  font-family: "Archivo Black", sans-serif; font-size: clamp(34px, 7vw, 84px);
+  letter-spacing: 0.01em; color: var(--ls-paper, #ece6d6); text-align: center; line-height: 0.95;
+}
+.lost-title {
+  font-size: clamp(46px, 10vw, 120px);
+  text-shadow: 3px 0 rgba(232, 105, 60, 0.7), -3px 0 rgba(91, 176, 165, 0.7);
+}
+.lost-see {
+  font-family: VT323, monospace; font-size: clamp(26px, 4vw, 44px);
+  letter-spacing: 0.2em; color: var(--ls-glow);
+}
+.gate-btn { font-size: 18px; padding: 10px 22px; }
+.gate-sub { font-family: VT323, monospace; font-size: 20px; letter-spacing: 0.12em; color: var(--ls-orange); }
+.gate-welcome { font-family: VT323, monospace; font-size: 22px; color: var(--ls-glow); min-height: 24px; text-align: center; }
+.dial {
+  position: relative; width: min(760px, 88vw); height: 74px;
+  border: 1px solid rgba(91, 176, 165, 0.45); border-radius: 10px;
+  background: rgba(21, 41, 26, 0.35); box-shadow: inset 0 0 22px rgba(91, 176, 165, 0.12);
+}
+.dial-fm { position: absolute; left: 16px; top: 24px; font-family: VT323, monospace; font-size: 20px; color: var(--ls-glow); }
+.dial-ticks { position: absolute; left: 56px; right: 24px; top: 8px; bottom: 16px; }
+.dial-ticks i { position: absolute; bottom: 0; width: 1px; background: var(--ls-glow); opacity: 0.75; }
+.dial-ticks em {
+  position: absolute; bottom: 26px; transform: translateX(-50%); font-style: normal;
+  font-family: VT323, monospace; font-size: 18px; color: var(--ls-glow);
+}
+.dial-needle {
+  position: absolute; top: 0; bottom: -8px; width: 2px; margin-left: -1px; background: var(--ls-orange);
+  box-shadow: 0 0 10px var(--ls-orange), 0 0 22px var(--ls-orange);
+  transition: left 1.6s cubic-bezier(0.3, 0.1, 0.2, 1);
+}
+
+/* paper note on the glass (image coords) */
+.oo-note {
+  position: absolute; left: 1010px; top: 470px; width: 250px; height: 190px; z-index: 4;
+  background: #e9e2cf; color: #1d1d1d; font-family: VT323, monospace; font-size: 34px; line-height: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  transform: rotate(-3deg); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.6); border-radius: 2px;
+  transition: transform 0.9s cubic-bezier(0.5, 0, 0.8, 0.4), opacity 0.9s; pointer-events: none;
+}
+.oo-note small { font-size: 20px; margin-top: 8px; opacity: 0.75; }
+.oo-note::before, .oo-note::after {
+  content: ""; position: absolute; width: 70px; height: 22px; background: rgba(220, 210, 170, 0.75); top: -9px;
+}
+.oo-note::before { left: -14px; transform: rotate(-30deg); }
+.oo-note::after { right: -14px; transform: rotate(28deg); }
+.oo-note.is-fallen { transform: translate(40px, 620px) rotate(28deg); opacity: 0; }
+.oo-note:not(.is-fallen) { transition: transform 0.18s cubic-bezier(0.2, 1.4, 0.4, 1), opacity 0.1s; }
+
+/* unlit sign: same photo, cropped to the sign, desaturated and dark */
+.sign-dark {
+  position: absolute; left: 985px; top: 6px; width: 720px; height: 106px; z-index: 3; pointer-events: none;
+  background: url(/machine/machine-empty.jpg) -985px -6px / 2688px 1152px no-repeat;
+  filter: grayscale(1) brightness(0.32) contrast(1.1); opacity: 0;
+}
+.sign-dark.is-on { opacity: 1; }
+.is-offair > img { filter: saturate(0.55); }
+
+/* top bar extras */
+.onair-badge {
+  font-family: VT323, monospace; font-size: 19px; color: var(--ls-orange); white-space: nowrap;
+  animation: live-blink 1.6s steps(1) infinite;
+}
+.onair-badge.is-off { color: var(--ls-static); animation: none; }
+.btn-secondary.btn-sm { font-size: 16px; padding: 3px 8px; opacity: 0.8; }
+.radio { display: flex; align-items: center; gap: 8px; font-family: VT323, monospace; color: var(--ls-glow); }
+.radio-btn {
+  width: 26px; height: 26px; border: 1px solid var(--ls-glow); border-radius: 50%;
+  font-size: 11px; line-height: 1; color: var(--ls-glow); display: grid; place-items: center;
+}
+.radio.is-on .radio-btn { background: var(--ls-glow); color: var(--ls-black); }
+.radio-np { width: 170px; overflow: hidden; white-space: nowrap; font-size: 17px; }
+.radio-np span { display: inline-block; }
+.radio.is-on .radio-np span { animation: np-scroll 14s linear infinite; }
+@keyframes np-scroll { to { transform: translateX(-50%); } }
+.radio-meter { display: flex; align-items: flex-end; gap: 2px; height: 14px; }
+.radio-meter i { width: 3px; height: 3px; background: var(--ls-glow); }
+.radio.is-on .radio-meter i { animation: meter 0.5s ease-in-out infinite alternate; }
+.radio.is-on .radio-meter i:nth-child(2) { animation-duration: 0.37s; }
+.radio.is-on .radio-meter i:nth-child(3) { animation-duration: 0.61s; }
+.radio.is-on .radio-meter i:nth-child(4) { animation-duration: 0.43s; }
+.radio.is-on .radio-meter i:nth-child(5) { animation-duration: 0.29s; }
+@keyframes meter { from { height: 3px; } to { height: 14px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .dial-needle { transition-duration: 0.01s; }
+  .radio.is-on .radio-np span, .radio.is-on .radio-meter i, .onair-badge { animation: none; }
+}

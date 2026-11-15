@@ -26,6 +26,16 @@ interface MachineStageProps {
   row: number | null;
   children: ReactNode;
   rattle?: number;
+  /** Intro: camera pushed in close on the dark corridor. */
+  intro?: boolean;
+  /** Camera transition length in seconds (2.6 for the intro glide, 0 to cut). */
+  duration?: number;
+  /** Machine brightness 0–1 (flicker on/off, day dimming). */
+  bright?: number;
+  /** Menu + LCD visible. */
+  uiOn?: boolean;
+  /** Day mode: desaturate. */
+  offAir?: boolean;
 }
 
 /**
@@ -33,10 +43,14 @@ interface MachineStageProps {
  * coordinates. The whole stage is scaled/translated by the "camera" so
  * overlays always line up with the photo at any screen size.
  */
-export function MachineStage({ mode, row, children, rattle = 0 }: MachineStageProps) {
+export function MachineStage({ mode, row, children, rattle = 0, intro = false, duration = 0.9, bright = 1, uiOn = true, offAir = false }: MachineStageProps) {
   const { w, h } = useViewport();
   const mobile = w <= 760;
-  const cam: Camera = computeCamera(mode, row, w, h, mobile);
+  let cam: Camera = computeCamera(mode, row, w, h, mobile);
+  if (intro) {
+    const s = Math.max(w / 900, h / 600);
+    cam = { s, tx: w / 2 - 1340 * s, ty: h / 2 - 640 * s };
+  }
 
   return (
     <>
@@ -56,9 +70,13 @@ export function MachineStage({ mode, row, children, rattle = 0 }: MachineStagePr
           style={{ width: STAGE_W, height: STAGE_H, transformOrigin: "0 0" }}
           initial={false}
           animate={{ x: cam.tx, y: cam.ty, scale: cam.s }}
-          transition={{ duration: 0.9, ease: EASE }}
+          transition={{ duration: intro ? 0 : duration, ease: EASE }}
         >
-          <div key={rattle} className={rattle ? "stage-rattle" : undefined} style={{ position: "absolute", inset: 0 }}>
+          <div
+            key={rattle}
+            className={[rattle ? "stage-rattle" : "", uiOn ? "" : "ui-off", offAir ? "is-offair" : ""].join(" ")}
+            style={{ position: "absolute", inset: 0, filter: bright < 1 ? `brightness(${bright})` : undefined }}
+          >
           <img
             src="/machine/machine-empty.jpg"
             alt="The Lost Signal 88.8 vending machine in a dark corridor"

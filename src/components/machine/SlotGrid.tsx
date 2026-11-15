@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import { PRODUCTS, type Product } from "@/data/products";
 import { SLOT_COLS, SLOT_H, SLOT_ROWS, SLOT_W } from "@/lib/machine-layout";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,12 @@ interface SlotGridProps {
   dimRow?: number | null;
   shake?: { code: string; tick: number } | null;
   ticks?: Record<string, number>;
+  /** Products are in the slots (false hides them until the boot drop). */
+  loaded?: boolean;
+  /** Seconds between each product drop. */
+  step?: number;
+  /** Changes on every boot so the drop replays. */
+  bootKey?: number;
 }
 
 function isTouch() {
@@ -32,7 +38,9 @@ function Slot({
   dim,
   shakeTick,
   tick,
+  step,
 }: {
+  step: number;
   tick: number;
   dim: boolean;
   shakeTick: number;
@@ -73,7 +81,7 @@ function Slot({
       initial={{ opacity: 0, y: -26 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        delay: 0.35 + index * 0.09,
+        delay: index * step,
         type: "spring",
         stiffness: 320,
         damping: 19,
@@ -99,15 +107,11 @@ function Slot({
   );
 }
 
-export function SlotGrid({ selected, available, onSelect, onOpen, dimRow = null, shake = null, ticks = {} }: SlotGridProps) {
-  // Remount the grid once on first paint so the drop-in stagger plays after
-  // the stage image has had a chance to load.
-  const [ready, setReady] = useState(false);
-  useEffect(() => setReady(true), []);
-  if (!ready) return null;
+export function SlotGrid({ selected, available, onSelect, onOpen, dimRow = null, shake = null, ticks = {}, loaded = true, step = 0.09, bootKey = 0 }: SlotGridProps) {
+  if (!loaded) return null;
 
   return (
-    <>
+    <Fragment key={bootKey}>
       {PRODUCTS.map((p, i) => (
         <Slot
           key={p.code}
@@ -120,8 +124,9 @@ export function SlotGrid({ selected, available, onSelect, onOpen, dimRow = null,
           dim={dimRow != null && i >= 0 && Math.floor(i / 4) !== dimRow}
           shakeTick={shake?.code === p.code ? shake.tick : 0}
           tick={ticks[p.code] ?? 0}
+          step={step}
         />
       ))}
-    </>
+    </Fragment>
   );
 }

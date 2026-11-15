@@ -7,3 +7,4 @@
 - [x] Verify overlay alignment at 1440x900 and 390px phone (1920x1080 uses same cover math)
 - [x] Commit
 - [x] Phase 2: hologram, product/row/cart/saved views, URLs, jammed C4
+- [x] Phase 5: intro, exit, night/day, sound, radio
