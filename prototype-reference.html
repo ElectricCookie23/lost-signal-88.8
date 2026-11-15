@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Lost Signal 88.8: Machine Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600&family=VT323&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--black:#050E08;--green:#15291A;--oxide:#4E8D78;--glow:#5BB0A5;--orange:#E8693C;--fog:#D8E6DF;--static:#8FA79A}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--black);color:var(--fog);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}
+input,select,textarea{font:inherit}
+
+/* backdrop fills every empty edge with the corridor itself */
+#backdrop{position:fixed;inset:-40px;background:url(machine.jpg) center/cover;filter:blur(28px) brightness(.45) saturate(1.2)}
+#view{position:fixed;inset:0;overflow:hidden}
+#stage{position:absolute;left:0;top:0;width:2688px;height:1152px;transform-origin:0 0;
+  transition:transform 1s cubic-bezier(.65,0,.25,1),filter .15s linear;will-change:transform}
+#stage.slow{transition:transform 2.6s cubic-bezier(.45,0,.2,1),filter .15s linear}
+#stage>img.bg{position:absolute;inset:0;width:100%;height:100%;user-select:none;-webkit-user-drag:none}
+.abs{position:absolute}
+
+#menu{left:880px;top:150px;width:735px;height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;opacity:0;transition:opacity .6s}
+#menu .row1{display:flex;gap:46px}
+#menu .row1 button{font-family:"Archivo Black";font-size:31px;letter-spacing:.04em;color:var(--glow);text-shadow:0 0 10px rgba(91,176,165,.9),0 0 22px rgba(91,176,165,.45)}
+#menu .row2{display:flex;gap:18px;font-family:VT323;font-size:23px;letter-spacing:.08em;color:var(--glow)}
+#menu .row2 span{opacity:.5}
+#menu button:hover{color:#fff;text-shadow:0 0 12px var(--glow),0 0 28px var(--glow)}
+#menu button.on{color:var(--orange);text-shadow:0 0 12px rgba(232,105,60,.9)}
+
+/* slots: photo fills the compartment behind the glass */
+.slot{position:absolute;width:184px;height:166px;border-radius:6px;transition:box-shadow .2s,opacity .3s}
+.slot .ph{position:absolute;left:11px;top:9px;width:162px;height:124px;border-radius:3px;overflow:hidden;opacity:0;transform:translateY(-12px);
+  transition:opacity .35s,transform .35s cubic-bezier(.3,1.6,.5,1);box-shadow:0 6px 14px rgba(0,0,0,.65),inset 0 0 0 1px rgba(91,176,165,.25)}
+.slot.in .ph{opacity:1;transform:none}
+.slot .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .35s,transform .6s}
+.slot .ph img.hv{opacity:0}
+.slot:hover .ph img.hv,.slot:focus-visible .ph img.hv{opacity:1;transform:scale(1.04)}
+.slot .ph::after{content:"";position:absolute;inset:0;background:linear-gradient(118deg,rgba(255,255,255,.14),transparent 32%,transparent 70%,rgba(91,176,165,.12));pointer-events:none}
+.chip{position:absolute;left:50%;top:136px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;white-space:nowrap;
+  background:#06130c;border:1.5px solid var(--glow);border-radius:4px;padding:0 8px;height:25px;font-family:VT323;opacity:0;transition:opacity .4s;
+  box-shadow:0 0 10px rgba(91,176,165,.45)}
+.slot.in .chip{opacity:1}
+.chip b{font-weight:400;font-size:24px;color:#e9fff8;letter-spacing:.04em}
+.chip i{font-style:normal;font-size:17px;color:var(--glow)}
+.chip i.low{color:var(--orange)}
+.slot:hover,.slot.sel{box-shadow:0 0 0 2px var(--glow),0 0 26px rgba(91,176,165,.6);background:rgba(91,176,165,.06)}
+.slot.sel .chip{background:var(--glow)}.slot.sel .chip b,.slot.sel .chip i{color:#03140d}
+.slot.dim{opacity:.22}
+.slot.gone .ph{opacity:.15}
+.slot.out .ph img{filter:grayscale(1) brightness(.45)}
+.slot .stamp{position:absolute;left:50%;top:58px;transform:translate(-50%,-50%) rotate(-12deg);font-family:"Archivo Black";font-size:22px;color:var(--orange);
+  border:3px solid var(--orange);padding:2px 8px;letter-spacing:.04em;display:none;text-shadow:0 0 8px rgba(232,105,60,.6);background:rgba(5,14,8,.55)}
+.slot.out .stamp{display:block}
+.slot.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translate(-5px,2px) rotate(-1deg)}40%{transform:translate(5px,-2px) rotate(1deg)}60%{transform:translate(-4px,1px)}80%{transform:translate(3px,-1px)}}
+.slot.tick .chip{animation:tick .9s}
+@keyframes tick{0%,100%{box-shadow:0 0 10px rgba(91,176,165,.45)}30%{box-shadow:0 0 0 3px var(--orange),0 0 24px var(--orange)}}
+#tip{position:absolute;pointer-events:none;font-family:VT323;font-size:23px;white-space:nowrap;padding:3px 10px;border:1.5px solid var(--glow);border-radius:4px;
+  background:rgba(5,14,8,.92);color:var(--fog);box-shadow:0 0 14px rgba(91,176,165,.5);opacity:0;transition:opacity .15s;transform:translate(-50%,-100%);z-index:3}
+
+#lcd{left:1705px;top:276px;width:180px;height:84px;display:flex;align-items:center;justify-content:center;text-align:center;
+  font-family:VT323;font-size:25px;line-height:1.05;color:#7ff0d6;text-shadow:0 0 8px rgba(91,176,165,.95);background:rgba(14,40,30,.55);border-radius:3px;opacity:0;transition:opacity .4s}
+.key{position:absolute;width:44px;height:38px;border-radius:5px;transition:box-shadow .12s,background .12s}
+.key:hover{box-shadow:0 0 0 2px rgba(91,176,165,.7),0 0 12px rgba(91,176,165,.6)}
+.key.on{background:rgba(91,176,165,.3);box-shadow:0 0 0 2px var(--glow),0 0 16px var(--glow)}
+.key.off{background:rgba(5,14,8,.55)}
+.mbtn{position:absolute;border-radius:7px;transition:box-shadow .15s,background .15s}
+.mbtn:hover{box-shadow:0 0 0 2px var(--glow),0 0 18px rgba(91,176,165,.7);background:rgba(91,176,165,.12)}
+.mbtn.flash{background:rgba(232,105,60,.35);box-shadow:0 0 0 2px var(--orange),0 0 18px var(--orange)}
+
+#tray{left:942px;top:952px;width:652px;height:106px;border-radius:6px;display:flex;align-items:flex-end;justify-content:center;gap:8px;padding-bottom:10px;transition:box-shadow .2s}
+#tray:hover{box-shadow:inset 0 0 0 2px var(--glow),0 0 18px rgba(91,176,165,.5)}
+#tray .hint{position:absolute;top:12px;left:0;right:0;text-align:center;font-family:VT323;font-size:25px;letter-spacing:.16em;color:var(--glow);text-shadow:0 0 8px var(--glow)}
+#tray img{width:58px;height:58px;border-radius:3px;object-fit:cover;box-shadow:0 4px 10px #000;transform:rotate(var(--r))}
+.faller{position:absolute;width:162px;height:124px;border-radius:3px;object-fit:cover;z-index:5;box-shadow:0 8px 20px #000;
+  transition:left .55s cubic-bezier(.5,0,.9,.6),top .55s cubic-bezier(.5,0,.9,.6),width .55s,height .55s,transform .55s}
+
+#note{left:1010px;top:470px;width:250px;height:190px;background:#e9e2cf;color:#1d1d1d;font-family:VT323,cursive;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;transform:rotate(-3deg);box-shadow:0 8px 18px rgba(0,0,0,.6);
+  font-size:34px;line-height:1;border-radius:2px;z-index:4;transition:transform .9s cubic-bezier(.5,0,.8,.4),opacity .9s}
+#note small{font-size:20px;margin-top:8px;opacity:.75}
+#note::before,#note::after{content:"";position:absolute;width:70px;height:22px;background:rgba(220,210,170,.75);top:-9px}
+#note::before{left:-14px;transform:rotate(-30deg)}#note::after{right:-14px;transform:rotate(28deg)}
+#note.fall{transform:translate(40px,620px) rotate(28deg);opacity:0}
+
+#paper{left:1763px;top:762px;width:104px;height:0;overflow:hidden;background:#efece4;color:#1c1c1c;font-family:VT323;font-size:8.6px;line-height:1.15;
+  padding:0 5px;box-shadow:0 4px 10px rgba(0,0,0,.6);z-index:6;transition:height 3.2s steps(28,end)}
+#paper .in{padding:6px 0 10px}
+#paper .row{display:flex;justify-content:space-between;gap:3px}
+#paper hr{border:0;border-top:.6px dashed #555;margin:3px 0}
+#paper .big{font-size:11px}
+#paper.tear{transition:transform .8s cubic-bezier(.5,0,.8,.4),opacity .8s;transform:translate(60px,300px) rotate(18deg);opacity:0}
+
+.haze{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;opacity:0;transition:opacity 3s}
+.haze.on{opacity:1}
+.haze span{position:absolute;border-radius:50%;filter:blur(70px)}
+.haze span:nth-child(1){width:1500px;height:420px;left:500px;top:820px;background:radial-gradient(circle,rgba(91,176,165,.2),transparent 70%);animation:d1 24s ease-in-out infinite alternate}
+.haze span:nth-child(2){width:1100px;height:380px;left:1300px;top:700px;background:radial-gradient(circle,rgba(91,176,165,.14),transparent 70%);animation:d2 30s ease-in-out infinite alternate}
+.haze span:nth-child(3){width:900px;height:300px;left:900px;top:-40px;background:radial-gradient(circle,rgba(232,105,60,.16),transparent 70%);animation:d3 20s ease-in-out infinite alternate}
+@keyframes d1{to{transform:translate(260px,-60px) scale(1.15)}}@keyframes d2{to{transform:translate(-320px,-40px) scale(1.2)}}@keyframes d3{to{transform:translate(200px,30px) scale(.9)}}
+
+.grain{position:fixed;inset:-50%;pointer-events:none;opacity:.06;mix-blend-mode:overlay;z-index:40;animation:grain .5s steps(4) infinite;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");background-size:300px}
+@keyframes grain{25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-1%,3%)}}
+.vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(5,14,8,.7) 100%);z-index:2}
+#static{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:45;opacity:0;transition:opacity .5s}
+
+#hud{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:16px;padding:12px 20px;z-index:30;opacity:0;transition:opacity .8s;pointer-events:none;
+  background:linear-gradient(rgba(5,14,8,.9),rgba(5,14,8,0))}
+#hud.on{opacity:1;pointer-events:auto}
+#hud .logo{font-family:"Archivo Black";letter-spacing:.04em;font-size:15px;white-space:nowrap}
+#hud .logo b{color:var(--orange)}
+#live{flex:1;min-width:0;font-family:VT323;font-size:19px;color:var(--static);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#live .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--orange);margin-right:7px;box-shadow:0 0 8px var(--orange);animation:blink 1.6s steps(1) infinite}
+#live.flash{color:var(--fog)}
+#hud .r{display:flex;gap:8px;align-items:center}
+@keyframes blink{50%{opacity:.3}}
+.b2{font-family:VT323;font-size:19px;text-transform:uppercase;color:var(--glow);border:1px solid var(--glow);border-radius:4px;padding:3px 11px;transition:all .15s;white-space:nowrap}
+.b2:hover{background:rgba(91,176,165,.14);box-shadow:0 0 12px rgba(91,176,165,.5)}
+.b2.cart{color:var(--black);background:var(--glow)}
+.b1{font-family:"Archivo Black";text-transform:uppercase;font-size:14px;letter-spacing:.04em;background:var(--orange);color:var(--black);border-radius:4px;padding:12px 20px;transition:all .15s}
+.b1:hover:not(:disabled){background:#F07A4E;box-shadow:0 0 18px rgba(232,105,60,.65)}
+.b1:active,.b2:active{transform:translateY(1px)}
+.sub{display:block;font-family:VT323;font-size:15px;text-transform:none;letter-spacing:.05em;opacity:.75;margin-top:1px}
+
+#beam{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9;opacity:0;transition:opacity .35s}
+#beam.on{opacity:1}
+#holo{position:fixed;z-index:10;right:2.5vw;top:64px;bottom:22px;width:min(600px,40vw);overflow:auto;padding:26px 28px 24px;
+  background:linear-gradient(rgba(10,40,36,.86),rgba(5,24,20,.9)),repeating-linear-gradient(0deg,rgba(91,176,165,.06) 0 1px,transparent 1px 4px);
+  border:1.5px solid var(--glow);box-shadow:0 0 28px rgba(91,176,165,.45),inset 0 0 40px rgba(91,176,165,.12);
+  clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px);
+  opacity:0;transform:translateX(30px) scale(.97);pointer-events:none;transition:opacity .3s,transform .4s cubic-bezier(.2,.9,.3,1);backdrop-filter:blur(4px)}
+#holo.on{opacity:1;transform:none;pointer-events:auto;animation:hflick .5s}
+@keyframes hflick{0%{opacity:0}20%{opacity:.8}30%{opacity:.2}45%{opacity:1}60%{opacity:.6}100%{opacity:1}}
+#holo::-webkit-scrollbar{width:6px}#holo::-webkit-scrollbar-thumb{background:var(--oxide)}
+.x{position:sticky;float:right;top:0;font-family:VT323;font-size:22px;color:var(--glow);margin:-12px -12px 0 0;z-index:2}
+.lcd{font-family:VT323;color:var(--glow);letter-spacing:.04em}
+.h1{font-family:"Archivo Black";text-transform:uppercase;font-size:30px;line-height:1.02;letter-spacing:.01em}
+.price{font-family:VT323;font-size:34px;color:var(--orange)}
+.pill{display:inline-block;font-family:VT323;font-size:18px;color:var(--orange);border:1px solid var(--orange);border-radius:4px;padding:0 8px;margin-left:8px;vertical-align:middle}
+.stock{font-family:VT323;font-size:20px;margin-top:4px}.stock.ok{color:#7ff0d6}.stock.low{color:var(--orange)}.stock.none{color:var(--static)}
+.copy{font-size:14.5px;line-height:1.55;color:var(--fog);opacity:.92}
+.gal{display:grid;grid-template-columns:1fr 64px;gap:8px;margin:14px 0}
+.gal .main{width:100%;aspect-ratio:4/3;object-fit:cover;border:1px solid rgba(91,176,165,.4)}
+.gal .th{display:flex;flex-direction:column;gap:8px}
+.gal .th button{width:64px;height:64px;border:1px solid rgba(91,176,165,.35);padding:0;overflow:hidden;opacity:.6}
+.gal .th button.on{opacity:1;border-color:var(--glow);box-shadow:0 0 10px rgba(91,176,165,.6)}
+.gal .th img{width:100%;height:100%;object-fit:cover}
+.qty{display:inline-flex;border:1px solid var(--glow);border-radius:4px;font-family:VT323;font-size:22px;color:var(--glow)}
+.qty button{width:34px;color:var(--glow)}.qty span{width:34px;text-align:center;border-left:1px solid var(--oxide);border-right:1px solid var(--oxide)}
+.acts{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:stretch}
+.calls{margin-top:18px;border-top:1px dashed var(--oxide);padding-top:12px}
+.calls p{font-size:13.5px;margin:6px 0;color:var(--static)}.calls b{color:var(--glow);font-family:VT323;font-size:17px;font-weight:400}
+.toast{font-family:VT323;font-size:19px;color:var(--orange);margin-top:10px;min-height:22px}
+.toast a{color:var(--glow)}
+.rcpt{font-family:VT323;font-size:21px;line-height:1.25}
+.rcpt .ln{display:grid;grid-template-columns:36px 1fr auto auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(78,141,120,.25)}
+.rcpt .ln img{width:36px;height:36px;object-fit:cover}
+.rcpt .nm small{display:block;color:var(--static);font-size:16px}
+.rcpt .ln .qty{font-size:18px}.rcpt .ln .qty button{width:26px}.rcpt .ln .qty span{width:26px}
+.sumrow{display:flex;justify-content:space-between;padding:3px 0}
+.dash{border-top:1px dashed var(--glow);margin:8px 0}
+.rowlist .it{display:grid;grid-template-columns:72px 1fr auto;gap:12px;align-items:center;padding:8px;border-bottom:1px solid rgba(78,141,120,.35);cursor:pointer}
+.rowlist .it:hover{background:rgba(91,176,165,.08)}
+.rowlist img{width:72px;height:72px;object-fit:cover}
+.rowlist .it.out img{filter:grayscale(1) brightness(.5)}
+.field{display:block;margin:9px 0}
+.field span{display:block;font-family:VT323;font-size:17px;color:var(--glow);margin-bottom:3px}
+.field input,.field select,.field textarea{width:100%;background:rgba(5,14,8,.6);border:1px solid var(--oxide);color:var(--fog);padding:9px 10px;border-radius:3px;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--glow);box-shadow:0 0 10px rgba(91,176,165,.4)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.steps{font-family:VT323;font-size:20px;color:var(--static);margin:8px 0 6px}.steps b{color:var(--glow);font-weight:400}
+.log figure{margin:14px 0}.log img{width:100%;display:block;border:1px solid rgba(91,176,165,.3)}
+.log figcaption{font-size:13.5px;margin-top:6px;color:var(--static)}.log figcaption b{font-family:VT323;font-size:18px;color:var(--orange);font-weight:400}
+.order{border:1px solid rgba(78,141,120,.45);padding:12px;margin:10px 0}
+.order .top{display:flex;justify-content:space-between;font-family:VT323;font-size:20px}
+.order .thumbs{display:flex;gap:6px;margin:8px 0}.order .thumbs img{width:44px;height:44px;object-fit:cover}
+
+#after{position:fixed;z-index:12;display:flex;flex-direction:column;gap:10px;opacity:0;pointer-events:none;transition:opacity .4s;width:220px}
+#after.on{opacity:1;pointer-events:auto}
+#after .note{font-family:VT323;font-size:18px;color:var(--static)}
+
+.gate{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;background:var(--black);transition:opacity .9s}
+.gate.hide{opacity:0;pointer-events:none}
+.gate h1{font-family:"Archivo Black";font-size:clamp(34px,7vw,84px);letter-spacing:.01em;color:#ece6d6;text-align:center;line-height:.95}
+.dial{position:relative;width:min(760px,88vw);height:74px;border:1px solid rgba(91,176,165,.45);border-radius:10px;background:rgba(21,41,26,.35);box-shadow:inset 0 0 22px rgba(91,176,165,.12)}
+.dial .ticks{position:absolute;left:56px;right:24px;bottom:16px;height:30px}
+.dial .ticks i{position:absolute;bottom:0;width:1px;background:var(--glow);opacity:.75}
+.dial .ticks em{position:absolute;bottom:26px;transform:translateX(-50%);font-style:normal;font-family:VT323;font-size:18px;color:var(--glow)}
+.dial .fm{position:absolute;left:16px;top:24px;font-family:VT323;font-size:20px;color:var(--glow)}
+.needle{position:absolute;top:8px;bottom:8px;width:2px;background:var(--orange);box-shadow:0 0 10px var(--orange),0 0 22px var(--orange);transition:left 1.6s cubic-bezier(.3,.1,.2,1)}
+.gate .subt{font-family:VT323;font-size:20px;letter-spacing:.12em;color:var(--orange)}
+.gate .back{font-family:VT323;font-size:22px;color:var(--glow);min-height:24px}
+#lost{background:rgba(5,14,8,.55)}
+#lost h1{font-size:clamp(46px,10vw,120px);text-shadow:3px 0 rgba(232,105,60,.7),-3px 0 rgba(91,176,165,.7)}
+#lost .see{font-family:VT323;font-size:clamp(26px,4vw,44px);letter-spacing:.2em;color:var(--glow)}
+
+@media (max-width:760px){
+  #holo{left:0;right:0;top:auto;bottom:0;width:auto;height:64vh;padding:20px 18px;clip-path:none;border-width:1.5px 0 0;transform:translateY(40px)}
+  #holo.on{transform:none}
+  #beam{display:none}
+  #hud{padding:8px 10px;gap:8px}#hud .logo{font-size:11px}#hud .logo b{display:block}#live{display:none}#hud .r{gap:5px}.b2{font-size:15px;padding:2px 6px}
+  #after{left:50%!important;transform:translateX(-50%);top:auto!important;bottom:16px;width:min(320px,90vw)}
+}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01s!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="backdrop"></div>
+<div id="view">
+  <div id="stage">
+    <img class="bg" src="machine.jpg" alt="The Lost Signal 88.8 vending machine in a dark corridor">
+    <div id="menu" class="abs">
+      <div class="row1"><button data-row="0">TAPES</button><button data-row="1">WEAR</button><button data-row="2">GEAR</button><button data-row="3">PAPER</button></div>
+      <div class="row2"><button data-page="station">STATION</button><span>·</span><button data-page="log">NIGHT LOG</button><span>·</span><button data-page="request">REQUEST LINE</button></div>
+    </div>
+    <div id="slots"></div>
+    <div id="tip"></div>
+    <div id="lcd" class="abs">STANDBY</div>
+    <div id="keys"></div>
+    <button class="mbtn" id="mAdd" style="left:1705px;top:597px;width:187px;height:46px" aria-label="Add selected item to cart"></button>
+    <button class="mbtn" id="mSave" style="left:1703px;top:662px;width:92px;height:45px" aria-label="Save selected item"></button>
+    <button class="mbtn" id="mClear" style="left:1810px;top:662px;width:86px;height:45px" aria-label="Clear selection"></button>
+    <button id="tray" class="abs" aria-label="Open your cart"><div class="hint">YOUR CART · EMPTY</div></button>
+    <div id="paper" class="abs"><div class="in" id="paperIn"></div></div>
+    <div id="note" class="abs">OUT OF<br>ORDER<br>TILL 8PM.<small>Still takes coins though.</small></div>
+    <div class="haze" id="haze"><span></span><span></span><span></span></div>
+  </div>
+</div>
+<div class="vig"></div>
+<svg id="beam"><defs><linearGradient id="bg" x1="0" x2="1"><stop offset="0" stop-color="#5BB0A5" stop-opacity=".55"/><stop offset="1" stop-color="#5BB0A5" stop-opacity=".06"/></linearGradient></defs><polygon id="beamP" fill="url(#bg)"/></svg>
+<div id="holo" role="dialog" aria-live="polite"></div>
+<div id="after">
+  <button class="b1" id="dl">Download receipt</button>
+  <button class="b2" id="keep">Keep shopping</button>
+  <button class="b2" id="tearLeave">Tear &amp; leave</button>
+  <div class="note" id="dlMsg">Your order is saved under ORDERS for next time.</div>
+</div>
+
+<header id="hud">
+  <div class="logo">LOST SIGNAL <b>88.8</b></div>
+  <div id="live"><span class="dot"></span><span id="liveT">ON AIR · 1 listener tuned in</span></div>
+  <div class="r">
+    <button class="b2" id="hSaved">♥ Saved 0</button>
+    <button class="b2 cart" id="hCart">Cart 0</button>
+    <button class="b2" id="hOrders">Orders</button>
+    <button class="b2" id="hSound">Sound on</button>
+    <button class="b2" id="hLeave">Exit</button>
+  </div>
+</header>
+
+<canvas id="static" width="320" height="180"></canvas>
+<div class="grain"></div>
+
+<section class="gate" id="gate">
+  <h1>LOST SIGNAL 88.8</h1>
+  <div class="dial"><span class="fm">FM</span><div class="ticks" id="ticks"></div><div class="needle" id="needle"></div></div>
+  <div class="back" id="welcome"></div>
+  <div style="display:flex;gap:12px"><button class="b1" id="tune">Tune in</button><button class="b2" id="skip" style="display:none">Skip intro</button></div>
+  <div class="subt">BROADCASTING 8PM–6AM</div>
+</section>
+
+<section class="gate hide" id="lost">
+  <h1>SIGNAL LOST.</h1>
+  <div class="see">SEE YOU AT 8.</div>
+  <button class="b2" id="again" style="font-size:22px;padding:6px 18px">Tune in again</button>
+</section>
+
+<script>
+const $=id=>document.getElementById(id);
+const COLS=[878,1065,1252,1438], ROWS=[258,430,597,762];
+const KX=[1726,1776,1826,1872], KY=[415,460,505,548];
+const ROWNAMES=['Tapes','Wear','Gear','Paper'];
+const P={
+A1:['Dead Air Vol. 1',45,'DJ pick','Ninety minutes recorded live between 2 and 4am, when the station thought nobody was listening. Includes the part where DJ Static falls asleep on the mic.'],
+A2:['Blank Tapes, 5-Pack',35,'','Five empty cassettes for your own bootlegs. What you record on them stays between you and the signal police.'],
+A3:['Nightwalker Cassette Player',189,'','A pocket tape player with an orange backlit window and a belt clip. Auto-reverse, because flipping a tape at 3am is too much effort.'],
+A4:['Rewind Pen',15,'','The pencil trick, upgraded. A pen with a hex end that fits any cassette spool. Writes and rewinds.'],
+B1:['88.8 Station Hoodie',220,'DJ pick','Heavyweight black hoodie with the frequency on the chest, a tuning dial down the sleeve and the broadcast schedule on the back.'],
+B2:['Off Air Cap',95,'','Orange cap embroidered with OFF AIR. For the daytime, when you\'re technically not here.'],
+B3:['Night Crew Jacket',340,'Bootleg','Black work jacket with a reflective NIGHT CREW strip across the back. Built for rooftops in winter.'],
+B4:['Signal Socks, 2-Pack',40,'','One pair in static grey, one in signal teal. They don\'t match. That\'s the point.'],
+C1:['Pocket Receiver',149,'DJ pick','A matchbox-sized radio pre-tuned to 88.8. It picks up other stations too, but we don\'t recommend them.'],
+C2:['Antenna Keychain',25,'','A chrome antenna that extends to 30cm. Does it improve reception? No. Will people ask about it? Every time.'],
+C3:['Booth Headphones',260,'','Closed-back headphones with a coiled cable long enough to reach the window when the DJ needs air.'],
+C4:['ON AIR Lamp',175,'','The same red light that hangs over our booth door. Plug it in and nobody walks into your room without knocking.'],
+D1:['Interference Sticker Sheet',20,'','Stickers of the frequency, the radio, the machine and a cassette. Stick them where they shouldn\'t be.'],
+D2:['Rooftop Session 004 Poster',60,'Bootleg','Riso print from the one night we broadcast live with a full band. The building manager still doesn\'t know.'],
+D3:['Static Zine, Issue 7',30,'','Photocopied pages of listener letters, the best 3am call-ins, and how to build an antenna out of a coat hanger.'],
+D4:['Frequency Map',85,'','A map of the city showing where 88.8 comes in clear, where it fades, and the one parking lot where it\'s perfect.']};
+const START={A1:12,A2:30,A3:2,A4:40,B1:8,B2:14,B3:3,B4:25,C1:6,C2:50,C3:4,C4:1,D1:60,D2:5,D3:20,D4:10};
+const CALLS={B1:[['2:14am','Best hoodie I own. Wore it to a wedding. Nobody stopped me.']],A1:[['3:03am','Fell asleep to side B. Woke up to the DJ snoring. 10/10.']],
+C2:[['11:42pm','The antenna does nothing and I love it.']],C4:[['1:20am','My roommate knocks now. The lamp works.'],['10:31pm','Kicked the machine. Got a discount. Felt powerful.']],
+A3:[['12:07am','Bought the tape player. Now I need tapes. Now I need more tapes. Send help.']],D3:[['2:58am','The zine taught me to build an antenna out of a coat hanger. My landlord is upset.']],
+D4:[['4:45am','Found the parking lot. Can confirm. Perfect signal.']],B3:[['5:12am','Wore the jacket on a night shift. Three people asked where it was from.']],C1:[['1:01am','Tried tuning to other stations. He was right. Don\'t.']]};
+const LOG=[['2000','20:00 / Lights on.','Top floor, broken corner, nobody\'s supposed to be up there.'],['2200','22:00 / The transmitter.','Held together with foil and a warning.'],
+['2358','23:58 / The corridor.','Two minutes to the top of the hour.'],['0015','00:15 / Stairwell B.','Keys in the door, antenna up.'],['0040','00:40 / Somewhere below.','Tea going cold. 88.8 coming in clear.'],
+['0247','02:47 / Rooftop.','The jacket, the antenna, and a city that won\'t sleep either.'],['0315','03:15 / The request line.','Twelve calls, one song, nobody hangs up.'],
+['0410','04:10 / Stairwell.','The machine humming, hood up.'],['0552','05:52 / Rooftop again.','Rain stopped. Last song before sign-off.'],['0600','06:00 / Closed till 8.','See you tonight.']];
+const CITIES=['Al Sadd','West Bay','Msheireb','Al Wakra','Lusail','The Pearl','Education City','Old Airport'];
+
+/* ---------- saved state (persists between visits) ---------- */
+const KEY='ls888_v2';
+function loadState(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return{}}}
+const S=Object.assign({stock:{...START},cart:{},saved:[],orders:[],visits:0,kicked:false,ship:null},loadState());
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+let sel=null,kicks=0,muted=false,mode='wide',curRow=null,cam={s:1,tx:0,ty:0},lastOrder=null,qty=1,view='main';
+const avail=c=>Math.max(0,S.stock[c]-(S.cart[c]||0));
+
+/* ---------- audio ---------- */
+let ctx=null; const buf={};
+const files={coin:'sfx_coin.mp3',drop:'sfx_drop.mp3',beep:'sfx_keypad_beep.mp3',rattle:'sfx_kick_rattle.mp3',static:'sfx_static.mp3',flicker:'sfx_flicker_on.mp3',neon:'loop_neon_buzz.wav'};
+function A(){if(!ctx){try{ctx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(ctx&&ctx.state==='suspended')ctx.resume();return ctx}
+async function load(){const a=A();if(!a)return;await Promise.all(Object.entries(files).map(async([k,f])=>{if(buf[k])return;try{buf[k]=await a.decodeAudioData(await (await fetch(f)).arrayBuffer())}catch(e){}}))}
+function play(k,o={}){const a=ctx;if(!a||muted||!buf[k])return null;const s=a.createBufferSource(),g=a.createGain();s.buffer=buf[k];s.loop=!!o.loop;g.gain.value=o.vol??1;s.connect(g).connect(a.destination);o.dur?s.start(0,o.off||0,o.dur):s.start(0,o.off||0);return{s,g}}
+function fade(n,t=1){if(!n||!ctx)return;const c=ctx.currentTime;n.g.gain.setValueAtTime(n.g.gain.value,c);n.g.gain.linearRampToValueAtTime(0,c+t);n.s.stop(c+t+.05)}
+let hum=null,tube=null;
+function humOn(on){if(on&&!hum&&!muted)hum=play('neon',{vol:.8,loop:true});else if(!on&&hum){fade(hum,.4);hum=null}}
+const click=(v=.35)=>play('static',{vol:v,off:Math.random()*.6,dur:.07});
+
+/* ---------- camera ---------- */
+const mobile=()=>innerWidth<=760;
+function area(){const W=innerWidth,H=innerHeight;
+  if(mode==='wide'||mode==='receipt')return{x:0,y:mobile()?48:56,w:W,h:H-(mobile()?48:56)};
+  return mobile()?{x:0,y:44,w:W,h:H*.36-44}:{x:0,y:56,w:W-Math.min(600,W*.4)-W*.03,h:H-66}}
+function rectFor(){
+  if(mode==='receipt')return mobile()?[1700,700,230,300]:[1650,690,360,340];
+  if(mode==='row'&&curRow!=null)return[860,ROWS[curRow]-70,1060,310];
+  return mobile()?[860,250,780,700]:[740,0,1210,1152]}
+function setCam(){const [x,y,w,h]=rectFor(),a=area(),W=innerWidth,H=innerHeight;let s=Math.min(a.w/w,a.h/h);
+  if(!mobile()) s=Math.max(s,W/2688,H/1152);
+  let tx=a.x+(a.w-w*s)/2-x*s, ty=a.y+(a.h-h*s)/2-y*s;
+  if(!mobile()){tx=Math.min(0,Math.max(W-2688*s,tx));ty=Math.min(a.y,Math.max(H-1152*s,ty))}
+  cam={s,tx,ty};$('stage').style.transform=`translate(${tx}px,${ty}px) scale(${s})`;beam()}
+const scr=(x,y)=>[cam.tx+x*cam.s,cam.ty+y*cam.s];
+function beam(){const on=$('holo').classList.contains('on')&&!mobile();$('beam').classList.toggle('on',on);if(!on)return;
+  const r=$('holo').getBoundingClientRect();const [px,py]=scr(1800,480);
+  $('beamP').setAttribute('points',`${px},${py} ${r.left+2},${r.top+18} ${r.left+2},${r.bottom-2}`)}
+addEventListener('resize',setCam);
+
+/* ---------- build machine ---------- */
+'ABCD'.split('').forEach((R,ri)=>[0,1,2,3].forEach(ci=>{const c=R+(ci+1);
+  const d=document.createElement('button');d.className='slot';d.dataset.code=c;d.style.left=COLS[ci]+'px';d.style.top=ROWS[ri]+'px';
+  d.innerHTML=`<div class="ph"><img src="p/${c}.jpg" alt="${P[c][0]}"><img class="hv" src="h/${c}.jpg" alt=""></div><div class="stamp">SOLD OUT</div><div class="chip"><b>${c}</b><i></i></div>`;
+  d.onmouseenter=()=>{const t=$('tip');t.textContent=`${P[c][0].toUpperCase()} · QAR ${P[c][1]}`;t.style.left=(COLS[ci]+92)+'px';t.style.top=(ROWS[ri]+4)+'px';t.style.opacity=1};
+  d.onmouseleave=()=>$('tip').style.opacity=0;d.onclick=()=>pick(c);$('slots').appendChild(d);
+  const k=document.createElement('button');k.className='key';k.dataset.code=c;k.style.left=(KX[ci]-22)+'px';k.style.top=(KY[ri]-19)+'px';k.setAttribute('aria-label','Key '+c);
+  k.onclick=()=>{play('beep',{vol:.7});pick(c)};$('keys').appendChild(k)}));
+const slot=c=>document.querySelector(`.slot[data-code="${c}"]`), key=c=>document.querySelector(`.key[data-code="${c}"]`);
+function stockText(c){const n=avail(c);return n===0?'SOLD OUT':n<=3?`${n} LEFT`:`${n} IN`}
+function paintStock(){Object.keys(P).forEach(c=>{const s=slot(c),n=avail(c),i=s.querySelector('.chip i');i.textContent=n===0?'OUT':n<=3?n+' LEFT':n+' IN';
+  i.classList.toggle('low',n<=3);s.classList.toggle('out',S.stock[c]===0);key(c).classList.toggle('off',S.stock[c]===0);
+  s.setAttribute('aria-label',`${c} ${P[c][0]}, QAR ${P[c][1]}, ${stockText(c).toLowerCase()}`)})}
+
+/* ---------- counts + LCD ---------- */
+const count=()=>Object.values(S.cart).reduce((a,b)=>a+b,0);
+const subtotal=()=>Object.entries(S.cart).reduce((a,[c,q])=>a+P[c][1]*q,0);
+const discount=()=>S.kicked?Math.round(subtotal()*.1):0;
+const total=()=>subtotal()-discount();
+let lcdTimer=null;
+function lcd(t,hold){clearTimeout(lcdTimer);$('lcd').innerHTML=t;if(hold)lcdTimer=setTimeout(lcdIdle,hold)}
+function lcdIdle(){lcd(sel?`${sel} · QAR ${P[sel][1]}<br>${stockText(sel)}`:`CART ${count()}<br>SAVED ${S.saved.length}`)}
+function sync(){persist();$('hCart').textContent='Cart '+count();$('hSaved').textContent='♥ Saved '+S.saved.length;$('hOrders').textContent='Orders'+(S.orders.length?' '+S.orders.length:'');
+  const t=$('tray');t.querySelectorAll('img').forEach(i=>i.remove());const items=Object.keys(S.cart).slice(-7);
+  t.querySelector('.hint').textContent=items.length?'':'YOUR CART · EMPTY';
+  items.forEach((c,i)=>{const im=document.createElement('img');im.src=`p/${c}.jpg`;im.alt='';im.style.setProperty('--r',(i%2?4:-5)+'deg');t.appendChild(im)});
+  paintStock();lcdIdle()}
+function select(c){document.querySelectorAll('.slot.sel,.key.on').forEach(e=>e.classList.remove('sel','on'));sel=c;if(c){slot(c).classList.add('sel');key(c).classList.add('on')}lcdIdle()}
+
+/* ---------- picking ---------- */
+function pick(c){
+  if(c==='C4'&&!S.kicked&&S.stock.C4>0){kicks++;const s=slot(c);s.classList.remove('shake');void s.offsetWidth;s.classList.add('shake');play('rattle',{vol:.9});
+    if(kicks<3){lcd(kicks===1?'C4 IS<br>JAMMED':'KICK IT<br>AGAIN',1600);return}
+    S.kicked=true;persist();lcd('FREED!<br>10% OFF',2600)}
+  select(c);openProduct(c)}
+window.pick=pick;
+
+/* ---------- hologram ---------- */
+function holo(html,m){mode=m;const h=$('holo');h.innerHTML=`<button class="x" onclick="closeHolo()" aria-label="Close">[X]</button>`+html;h.scrollTop=0;
+  h.classList.remove('on');void h.offsetWidth;h.classList.add('on');play('static',{vol:.22,dur:.22});setCam();setTimeout(beam,50)}
+function closeHolo(){$('holo').classList.remove('on');select(null);curRow=null;dimRows(null);menuOn(null);mode='wide';setCam();beam()}
+window.closeHolo=closeHolo;
+function dimRows(r){document.querySelectorAll('.slot').forEach(s=>s.classList.toggle('dim',r!=null&&s.dataset.code[0]!=='ABCD'[r]))}
+function menuOn(b){document.querySelectorAll('#menu button').forEach(x=>x.classList.toggle('on',x===b))}
+function stockLine(c){const n=avail(c),inCart=S.cart[c]||0;
+  if(S.stock[c]===0)return`<div class="stock none">● Sold out. Back when the DJ finds more.</div>`;
+  if(n===0)return`<div class="stock low">● Every last one is in your cart.</div>`;
+  return`<div class="stock ${n<=3?'low':'ok'}">● ${n<=3?`Only ${n} left`:`${n} in stock`}${inCart?` · ${inCart} in your cart`:''}</div>`}
+
+function openProduct(c){qty=1;view='main';const [n,pr,tag,cp]=P[c];curRow=null;dimRows(null);menuOn(null);const n0=avail(c);
+  const calls=(CALLS[c]||[]).map(([t,q])=>`<p><b>CALLER FROM ${t.toUpperCase()}</b><br>"${q}"</p>`).join('');
+  const isSaved=S.saved.includes(c);
+  holo(`<div class="lcd" style="font-size:44px;line-height:1">${c}</div>
+  <div class="h1">${n}</div>
+  <div style="margin-top:6px"><span class="price">QAR ${pr}</span>${tag?`<span class="pill">${tag.toUpperCase()}</span>`:''}</div>${stockLine(c)}
+  <div class="gal"><img class="main" id="gm" src="p/${c}.jpg" alt="${n}">
+   <div class="th"><button class="on" onclick="gal(this,'p/${c}.jpg')" aria-label="Product photo"><img src="p/${c}.jpg" alt=""></button><button onclick="gal(this,'h/${c}.jpg')" aria-label="In the wild"><img src="h/${c}.jpg" alt=""></button></div></div>
+  <p class="copy">${cp}</p>
+  <div class="acts"><div class="qty"><button onclick="q(-1,'${c}')" aria-label="Less">−</button><span id="qn">1</span><button onclick="q(1,'${c}')" aria-label="More">+</button></div>
+  <button class="b1" ${n0?'':'disabled'} onclick="addToCart('${c}')">${n0?'Add to cart':'Sold out'}<span class="sub">drops into the tray</span></button>
+  <button class="b2" style="font-size:20px;padding:8px 14px" onclick="toggleSave('${c}',this)">${isSaved?'♥ Saved':'♡ Save'}</button></div>
+  <div class="toast" id="toast"></div>${calls?`<div class="calls">${calls}</div>`:''}`,'product')}
+window.gal=(b,src)=>{$('gm').src=src;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
+window.q=(d,c)=>{qty=Math.max(1,Math.min(Math.max(1,avail(c)),qty+d));$('qn').textContent=qty};
+window.toggleSave=(c,btn)=>{const i=S.saved.indexOf(c);i>=0?S.saved.splice(i,1):S.saved.push(c);if(btn)btn.textContent=S.saved.includes(c)?'♥ Saved':'♡ Save';
+  play('beep',{vol:.6});lcd(S.saved.includes(c)?'SAVED<br>'+c:'REMOVED<br>'+c,1200);sync();flash('mSave')};
+function flash(id){const b=$(id);b.classList.add('flash');setTimeout(()=>b.classList.remove('flash'),350)}
+
+window.addToCart=(c,n)=>{n=Math.min(n||qty,avail(c));if(n<=0){lcd('SOLD<br>OUT',1400);play('rattle',{vol:.5});return}
+  play('coin',{vol:.9});flash('mAdd');lcd('VENDING<br>'+c,1400);
+  const s=slot(c),im=document.createElement('img');im.className='faller';im.src=`p/${c}.jpg`;im.alt='';
+  const ci=COLS[+c[1]-1],ri=ROWS['ABCD'.indexOf(c[0])];im.style.left=(ci+11)+'px';im.style.top=(ri+9)+'px';
+  $('stage').appendChild(im);s.classList.add('gone');
+  setTimeout(()=>{im.style.left=(1210+Math.random()*90)+'px';im.style.top='975px';im.style.width='60px';im.style.height='60px';im.style.transform=`rotate(${Math.random()*24-12}deg)`},380);
+  setTimeout(()=>{play('drop',{vol:1});im.remove();S.cart[c]=(S.cart[c]||0)+n;sync();
+    setTimeout(()=>s.classList.remove('gone'),700);const t=$('toast');
+    if(t&&mode==='product'){t.innerHTML=`Added to cart. <a href="#" onclick="openCart();return false">View cart (${count()}) →</a>`;
+      const st=t.parentNode.querySelector('.stock');if(st)st.outerHTML=stockLine(c)}},950)};
+
+function openCart(){select(null);dimRows(null);menuOn(null);const ln=Object.entries(S.cart);
+  if(!ln.length){holo(`<div class="h1">Your cart</div><div class="dash"></div>
+    <p class="copy" style="margin:14px 0">Your cart is empty. The machine is full. Do something about it.</p>
+    <button class="b2" onclick="closeHolo()">Back to the machine</button>`,'cart');return}
+  holo(`<div class="h1">Your cart</div><div class="lcd" style="font-size:18px;margin-top:2px">LOST SIGNAL 88.8 · STAIRWELL MACHINE #2</div><div class="dash"></div><div class="rcpt">
+  ${ln.map(([c,n])=>`<div class="ln"><img src="p/${c}.jpg" alt=""><div class="nm">${c} ${P[c][0].toUpperCase()}<small>QAR ${P[c][1]} each · ${avail(c)?avail(c)+' more available':'no more in stock'}</small></div>
+    <div class="qty"><button onclick="cq('${c}',-1)" aria-label="Remove one">−</button><span>${n}</span><button onclick="cq('${c}',1)" ${avail(c)?'':'disabled'} aria-label="Add one">+</button></div><span>${(P[c][1]*n).toFixed(2)}</span></div>`).join('')}
+  <div style="margin-top:8px"><div class="sumrow"><span>SUBTOTAL</span><span>${subtotal().toFixed(2)}</span></div>
+  ${S.kicked?`<div class="sumrow" style="color:var(--orange)"><span>KICKIT · 10% OFF</span><span>−${discount().toFixed(2)}</span></div>`:''}
+  <div class="sumrow"><span>SHIPPING (QATAR)</span><span>FREE</span></div><div class="dash"></div>
+  <div class="sumrow" style="font-size:30px"><span>TOTAL</span><span>QAR ${total().toFixed(2)}</span></div></div></div>
+  <div class="acts"><button class="b1" style="flex:1" onclick="checkout()">Checkout<span class="sub">insert coins</span></button><button class="b2" onclick="closeHolo()">Keep shopping</button></div>`,'cart')}
+window.openCart=openCart;
+window.cq=(c,d)=>{if(d>0&&!avail(c))return;S.cart[c]+=d;if(S.cart[c]<=0)delete S.cart[c];play('beep',{vol:.5});sync();openCart()};
+
+window.checkout=()=>{const sh=S.ship||{};holo(`<div class="steps"><b>1 SHIPPING</b> — 2 PAYMENT</div><div class="h1" style="font-size:24px">Where should it go?</div>
+  <form id="ship"><label class="field"><span>NAME</span><input required name="name" autocomplete="name" value="${sh.name||''}"></label>
+  <label class="field"><span>EMAIL</span><input required type="email" name="email" autocomplete="email" value="${sh.email||''}"></label>
+  <label class="field"><span>ADDRESS</span><input required name="addr" autocomplete="street-address" value="${sh.addr||''}"></label>
+  <div class="two"><label class="field"><span>CITY</span><input required name="city" value="${sh.city||'Doha'}"></label><label class="field"><span>COUNTRY</span><input required name="country" value="${sh.country||'Qatar'}"></label></div>
+  <div class="acts"><button class="b1" style="flex:1">Continue to payment</button></div>${sh.name?'<div class="toast" style="color:var(--glow)">Welcome back. We kept your details from last time.</div>':''}</form>`,'checkout');
+  $('ship').onsubmit=e=>{e.preventDefault();S.ship=Object.fromEntries(new FormData(e.target));persist();play('beep',{vol:.6});pay()}};
+function pay(){holo(`<div class="steps">1 SHIPPING — <b>2 PAYMENT</b></div><div class="h1" style="font-size:24px">Payment</div>
+  <div class="sumrow lcd" style="font-size:24px;margin:6px 0"><span>ORDER TOTAL</span><span>QAR ${total().toFixed(2)}</span></div>
+  <form id="payf"><label class="field"><span>CARD NUMBER</span><input inputmode="numeric" placeholder="•••• •••• •••• 4417" required></label>
+  <div class="two"><label class="field"><span>EXPIRY (MM/YY)</span><input placeholder="08/28" required></label><label class="field"><span>CVC</span><input placeholder="•••" required></label></div>
+  <div class="acts"><button class="b1" style="flex:1">Pay QAR ${total()}</button></div><div class="toast" id="payMsg"></div></form>`,'checkout');
+  $('payf').onsubmit=e=>{e.preventDefault();play('rattle',{vol:.5});
+    $('payMsg').innerHTML=`Payments are off air for now, so nothing was charged. Your items are reserved at the machine.<br><br><button class="b2" type="button" onclick="placeOrder()">Print my receipt</button>`}}
+
+/* ---------- order + receipt ---------- */
+window.placeOrder=()=>{const items=Object.entries(S.cart).map(([c,n])=>({c,n,name:P[c][0],price:P[c][1]}));
+  const no=String(88000+S.orders.length*7+Math.floor(Math.random()*7)).slice(-5);
+  lastOrder={no:'LS-'+no,date:new Date().toISOString(),items,subtotal:subtotal(),discount:discount(),total:total(),ship:S.ship};
+  items.forEach(({c,n})=>S.stock[c]=Math.max(0,S.stock[c]-n));S.orders.unshift(lastOrder);S.cart={};S.kicked=false;kicks=0;sync();printReceipt(lastOrder)};
+function fmtDate(d){const x=new Date(d);return x.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+x.toTimeString().slice(0,5)}
+function printReceipt(o){$('holo').classList.remove('on');mode='receipt';setCam();beam();
+  $('paperIn').innerHTML=`<div class="big" style="text-align:center">LOST SIGNAL 88.8</div><div style="text-align:center">STAIRWELL MACHINE #2</div><hr>
+  <div>ORDER ${o.no}</div><div>${fmtDate(o.date)}</div><hr>
+  ${o.items.map(i=>`<div class="row"><span>${i.c} ${i.name.toUpperCase()}${i.n>1?' x'+i.n:''}</span><span>${(i.price*i.n).toFixed(2)}</span></div>`).join('')}
+  ${o.discount?`<div class="row"><span>KICKIT -10%</span><span>-${o.discount.toFixed(2)}</span></div>`:''}<hr>
+  <div class="row big"><span>TOTAL QAR</span><span>${o.total.toFixed(2)}</span></div><div>PAYMENT: HELD (NOT CHARGED)</div><hr>
+  <div>KEEP THIS RECEIPT.<br>OR DON'T. WE'RE PIRATES.</div>`;
+  const p=$('paper');p.classList.remove('tear');p.style.transition='none';p.style.height='0';void p.offsetWidth;
+  setTimeout(()=>{p.style.transition='';p.style.height=($('paperIn').scrollHeight+6)+'px';let i=0;const t=setInterval(()=>{click(.22);if(++i>26)clearInterval(t)},115)},900);
+  setTimeout(()=>{const [x,y]=scr(1905,770);const a=$('after');if(!mobile()){a.style.left=Math.min(x+20,innerWidth-240)+'px';a.style.top=y+'px'}$('dlMsg').textContent='Saved under ORDERS for next time.';a.classList.add('on')},4200)}
+function tearPaper(){$('after').classList.remove('on');$('paper').classList.add('tear');play('static',{vol:.5,dur:.3})}
+$('keep').onclick=()=>{tearPaper();setTimeout(()=>{mode='wide';setCam();lcd('THANKS<br>NIGHT OWL',2000)},700)};
+$('tearLeave').onclick=()=>{tearPaper();setTimeout(leave,800)};
+$('dl').onclick=()=>downloadReceipt(lastOrder,$('dlMsg'));
+
+/* ---------- downloadable PDF receipt ---------- */
+let dlNS=null;(async()=>{try{if(window.claude&&claude.use)dlNS=await claude.use('downloads')}catch(e){}})();
+function receiptPDF(o){const {jsPDF}=window.jspdf;const lines=o.items.length;const h=150+lines*10;
+  const d=new jsPDF({unit:'mm',format:[80,h]});let y=12;const L=6,R=74;const tx=(t,x,al)=>d.text(String(t),x,y,{align:al||'left'});
+  d.setFont('courier','bold');d.setFontSize(15);tx('LOST SIGNAL 88.8',40,'center');y+=5;
+  d.setFont('courier','normal');d.setFontSize(8.5);tx('STAIRWELL MACHINE #2',40,'center');y+=4;tx('Pirate radio merch · Doha, Qatar',40,'center');y+=4;tx('signal@lostsignal888.fm',40,'center');y+=5;
+  const rule=()=>{d.setLineDashPattern([1,1],0);d.line(L,y,R,y);y+=5};rule();
+  d.setFontSize(9);tx('RECEIPT',L);tx(o.no,R,'right');y+=4.5;tx('Date',L);tx(fmtDate(o.date),R,'right');y+=4.5;
+  if(o.ship){tx('Ship to',L);tx(o.ship.name||'',R,'right');y+=4.5;tx('',L);tx(((o.ship.city||'')+', '+(o.ship.country||'')),R,'right');y+=4.5}
+  rule();d.setFont('courier','bold');tx('ITEM',L);tx('QTY',52,'right');tx('QAR',R,'right');y+=5;d.setFont('courier','normal');
+  o.items.forEach(i=>{tx(`${i.c} ${i.name}`.slice(0,21),L);tx(i.n,52,'right');tx((i.price*i.n).toFixed(2),R,'right');y+=4;d.setFontSize(7.5);tx(`   @ ${i.price.toFixed(2)} each`,L);d.setFontSize(9);y+=5.5});
+  rule();tx('Subtotal',L);tx(o.subtotal.toFixed(2),R,'right');y+=4.5;
+  if(o.discount){tx('KICKIT discount (10%)',L);tx('-'+o.discount.toFixed(2),R,'right');y+=4.5}
+  tx('Shipping',L);tx('FREE',R,'right');y+=4.5;tx('VAT',L);tx('0.00',R,'right');y+=6;
+  d.setFont('courier','bold');d.setFontSize(12);tx('TOTAL QAR',L);tx(o.total.toFixed(2),R,'right');y+=6;
+  d.setFont('courier','normal');d.setFontSize(8.5);tx('Payment: held, not charged (demo store)',L);y+=6;rule();
+  let bx=12;for(let i=0;i<46;i++){const w=[.4,.8,1.2][(i*7+o.no.charCodeAt(i%o.no.length))%3];d.setFillColor(0,0,0);d.rect(bx,y,w,12,'F');bx+=w+.55;if(bx>68)break}y+=16;
+  tx(o.no,40,'center');y+=6;tx('KEEP THIS RECEIPT.',40,'center');y+=4;tx("OR DON'T. WE'RE PIRATES.",40,'center');y+=5;tx('See you at 8.',40,'center');
+  return d}
+async function downloadReceipt(o,msgEl){if(!o||!window.jspdf){if(msgEl)msgEl.textContent='Receipt tool still loading. Try again in a second.';return}
+  const doc=receiptPDF(o),name=`LostSignal888-${o.no}.pdf`,blob=doc.output('blob');
+  try{if(dlNS){await dlNS.save({filename:name,data:blob});if(msgEl)msgEl.textContent='Receipt saved.';return}}catch(e){if(msgEl)msgEl.textContent='Download cancelled.';return}
+  try{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);if(msgEl)msgEl.textContent='Receipt downloaded.'}
+  catch(e){if(msgEl)msgEl.textContent='This viewer blocks downloads. It will work on the live site.'}}
+window.dlOrder=(i,btn)=>downloadReceipt(S.orders[i],btn.nextElementSibling);
+window.buyAgain=i=>{let added=0,missing=[];S.orders[i].items.forEach(({c,n})=>{const k=Math.min(n,avail(c));if(k>0){S.cart[c]=(S.cart[c]||0)+k;added+=k}if(k<n)missing.push(c)});
+  play('coin',{vol:.8});sync();openCart();if(missing.length){const t=document.createElement('div');t.className='toast';t.textContent=`Sold out now: ${missing.join(', ')}.`;$('holo').appendChild(t)}};
+
+/* ---------- other views ---------- */
+function list(codes){return`<div class="rowlist" style="margin-top:12px">${codes.map(c=>{const n=avail(c);return`<div class="it ${S.stock[c]?'':'out'}" onclick="pick('${c}')"><img src="p/${c}.jpg" alt="">
+  <div><div class="lcd" style="font-size:18px">${c} · ${S.stock[c]?(n<=3?`<span style="color:var(--orange)">${n} LEFT</span>`:n+' IN STOCK'):'SOLD OUT'}</div><div style="font-weight:600">${P[c][0]}</div></div>
+  <span class="price" style="font-size:24px">QAR ${P[c][1]}</span></div>`}).join('')}</div>`}
+function openRow(r,btn){select(null);curRow=r;dimRows(r);menuOn(btn);const R='ABCD'[r];
+  holo(`<div class="lcd" style="font-size:20px">ROW ${R}</div><div class="h1">${ROWNAMES[r]}</div>${list([1,2,3,4].map(i=>R+i))}`,'row')}
+function openPage(p,btn){select(null);curRow=null;dimRows(null);menuOn(btn);
+  if(p==='station')holo(`<img class="gal main" style="width:100%;aspect-ratio:4/3;object-fit:cover;margin-bottom:14px" src="log/2000.jpg" alt="The station, a broken corner at the top of a tower">
+    <div class="h1" style="font-size:26px">Nobody's supposed to know where we are.</div>
+    <p class="copy" style="margin-top:12px">88.8 started on a rooftop with a borrowed transmitter, a car battery and one rule: we only broadcast after dark.</p>
+    <p class="copy" style="margin-top:10px">The building has a corridor nobody uses after 8pm. In it was a vending machine that stopped selling soda years ago. We cleaned it out, rewired the lights and filled it with things the station makes.</p>
+    <p class="copy" style="margin-top:10px">Stock is small and it doesn't come back often. Every purchase keeps the transmitter running for another night. You either catch the signal or you don't.</p>
+    <p class="lcd" style="font-size:24px;margin-top:14px;color:var(--orange)">SEE YOU AT 8. BRING COINS.</p>`,'page');
+  if(p==='log')holo(`<div class="lcd" style="font-size:20px">20:00 — 06:00</div><div class="h1">Night Log</div><div class="log">
+    ${LOG.map(([f,t,c])=>`<figure><img src="log/${f}.jpg" alt="${t}" loading="lazy"><figcaption><b>${t}</b> ${c}</figcaption></figure>`).join('')}</div>`,'page');
+  if(p==='request'){holo(`<div class="h1">Request Line</div><p class="copy" style="margin:6px 0 4px">Open 8PM to 6AM. Lines are always busy. Leave a message.</p>
+    <form id="req"><label class="field"><span>YOUR NAME (OR CALL SIGN)</span><input required></label><label class="field"><span>EMAIL</span><input type="email" required></label>
+    <label class="field"><span>WHAT'S THIS ABOUT?</span><select><option>Song request</option><option>Order question</option><option>Restock alert</option><option>Shout-out on air</option><option>Something else</option></select></label>
+    <label class="field"><span>MESSAGE</span><textarea rows="4"></textarea></label>
+    <div class="acts"><button class="b1" style="flex:1">Send to the booth</button></div><div class="toast" id="reqMsg"></div></form>`,'page');
+    $('req').onsubmit=e=>{e.preventDefault();play('static',{vol:.4,dur:.3});$('reqMsg').textContent="Got it. If DJ Static reads it on air, you'll know.";e.target.reset()}}
+  if(p==='saved')holo(`<div class="h1">♥ Saved</div>${S.saved.length?list(S.saved):'<p class="copy" style="margin-top:12px">Nothing saved yet. Pick a slot and hit SAVE on the machine.</p>'}`,'page');
+  if(p==='orders')holo(`<div class="h1">Your orders</div><p class="copy" style="margin:6px 0 4px">Every receipt the machine has printed for you, on this device.</p>
+    ${S.orders.length?S.orders.map((o,i)=>`<div class="order"><div class="top"><span class="lcd">${o.no}</span><span>QAR ${o.total.toFixed(2)}</span></div>
+      <div style="font-size:13px;color:var(--static)">${fmtDate(o.date)} · ${o.items.reduce((a,b)=>a+b.n,0)} items</div>
+      <div class="thumbs">${o.items.map(i=>`<img src="p/${i.c}.jpg" alt="${i.name}" title="${i.c} ${i.name}">`).join('')}</div>
+      <div class="acts" style="margin-top:6px"><button class="b2" onclick="buyAgain(${i})">Buy again</button><button class="b2" onclick="dlOrder(${i},this)">Download receipt</button><span class="toast" style="margin:0"></span></div></div>`).join('')
+    :'<p class="copy" style="margin-top:12px">No orders yet. The machine is waiting.</p>'}`,'page')}
+document.querySelectorAll('#menu [data-row]').forEach(b=>b.onclick=()=>{play('beep',{vol:.5});openRow(+b.dataset.row,b)});
+document.querySelectorAll('#menu [data-page]').forEach(b=>b.onclick=()=>{play('beep',{vol:.5});openPage(b.dataset.page,b)});
+$('mAdd').onclick=()=>{if(!sel){play('beep');lcd('PICK A<br>SLOT FIRST',1400);return}addToCart(sel,1)};
+$('mSave').onclick=()=>{if(!sel){play('beep');lcd('PICK A<br>SLOT FIRST',1400);return}toggleSave(sel,null);if(mode==='product')openProduct(sel)};
+$('mClear').onclick=()=>{play('beep',{vol:.5});closeHolo()};
+$('tray').onclick=()=>{play('beep',{vol:.5});openCart()};
+$('hCart').onclick=openCart;$('hSaved').onclick=()=>openPage('saved');$('hOrders').onclick=()=>openPage('orders');
+$('hSound').onclick=()=>{muted=!muted;$('hSound').textContent='Sound '+(muted?'off':'on');humOn(!muted)};
+$('hLeave').onclick=()=>leave();
+
+/* ---------- live stock: other listeners buying ---------- */
+let listeners=3+Math.floor(Math.random()*9),liveTimer=null;
+function liveText(t){const l=$('live');$('liveT').innerHTML=t;l.classList.add('flash');setTimeout(()=>l.classList.remove('flash'),1200)}
+function liveTick(){listeners=Math.max(2,listeners+Math.round(Math.random()*4-2));
+  const pool=Object.keys(P).filter(c=>S.stock[c]>2);
+  if(pool.length&&Math.random()<.75){const c=pool[Math.floor(Math.random()*pool.length)];S.stock[c]--;persist();paintStock();
+    const s=slot(c);s.classList.remove('tick');void s.offsetWidth;s.classList.add('tick');if(sel===c)lcdIdle();
+    liveText(`Someone in ${CITIES[Math.floor(Math.random()*CITIES.length)]} just took ${c} ${P[c][0]} · ${avail(c)} left`);
+    if(mode==='product'&&sel===c){const st=$('holo').querySelector('.stock');if(st)st.outerHTML=stockLine(c)}}
+  else liveText(`ON AIR · ${listeners} listeners tuned in`);
+  liveTimer=setTimeout(liveTick,9000+Math.random()*14000)}
+
+/* ---------- static overlay ---------- */
+const sc=$('static'),sg=sc.getContext('2d');let staticRun=false;
+function staticLoop(){if(!staticRun)return;const im=sg.createImageData(320,180);
+  for(let i=0;i<im.data.length;i+=4){const v=Math.random()*255;im.data[i]=v*.85;im.data[i+1]=v;im.data[i+2]=v*.95;im.data[i+3]=255}
+  sg.putImageData(im,0,0);for(let k=0;k<4;k++){sg.fillStyle=`rgba(${Math.random()<.5?'91,176,165':'232,105,60'},.35)`;sg.fillRect(0,Math.random()*180,320,1+Math.random()*3)}
+  requestAnimationFrame(staticLoop)}
+function staticOn(o){sc.style.opacity=o;if(o>0&&!staticRun){staticRun=true;staticLoop()}if(o===0)setTimeout(()=>{if(sc.style.opacity==='0')staticRun=false},600)}
+
+/* ---------- dial ---------- */
+(function(){const t=$('ticks');for(let f=88;f<=108;f+=.5){const i=document.createElement('i');i.style.left=((f-88)/20*100)+'%';i.style.height=(f%2===0?18:8)+'px';t.appendChild(i);
+  if(f%2===0){const e=document.createElement('em');e.textContent=f;e.style.left=((f-88)/20*100)+'%';t.appendChild(e)}}})();
+const needleTo=f=>{const t=$('ticks').getBoundingClientRect(),d=$('needle').parentNode.getBoundingClientRect();$('needle').style.left=(t.left-d.left+(f-88)/20*t.width)+'px'};
+needleTo(101.4);addEventListener('resize',()=>{if(!$('gate').classList.contains('hide'))needleTo(101.4)});
+if(S.visits>0){$('welcome').textContent=`Welcome back, night owl.${count()?` Your cart still has ${count()} item${count()>1?'s':''}.`:''}`;$('skip').style.display=''}
+
+/* ---------- sequences ---------- */
+const stage=$('stage');const bright=v=>stage.style.filter=`brightness(${v})`;
+function flickerOn(done,fast){const pat=fast?[[100,60,120,.6],[0,80,200,.85]]:[[400,70,380,.55],[0,40,140,.35],[0,110,650,.8],[0,50,90,.5],[0,60,250,.7],[0,170,140,.9],[0,40,420,.6]];
+  let t=0;pat.forEach(([w,on,off,b])=>{t+=w;setTimeout(()=>{bright(b);click(.3+b*.2)},t);t+=on;setTimeout(()=>bright(.08),t);t+=off});
+  setTimeout(()=>{bright(1);click(.6);done&&done()},t)}
+function boot(fast){S.visits++;persist();
+  mode='wide';sel=null;$('lost').classList.add('hide');$('holo').classList.remove('on');$('after').classList.remove('on');beam();
+  document.querySelectorAll('.slot').forEach(s=>s.classList.remove('in','sel','dim'));$('menu').style.opacity=0;$('lcd').style.opacity=0;
+  const n=$('note');n.style.transition='none';n.classList.remove('fall');void n.offsetWidth;n.style.transition='';
+  stage.style.transition='none';bright(.08);sync();
+  if(!fast){const a={w:innerWidth,h:innerHeight};const s=Math.max(a.w/900,a.h/600);cam={s,tx:a.w/2-1340*s,ty:a.h/2-640*s};
+    stage.style.transform=`translate(${cam.tx}px,${cam.ty}px) scale(${s})`;void stage.offsetWidth;stage.classList.add('slow')}
+  stage.style.transition='';setCam();
+  setTimeout(()=>{stage.classList.remove('slow');tube=play('flicker',{vol:.9});
+    flickerOn(()=>{fade(tube,1.4);tube=null;humOn(true);$('haze').classList.add('on');$('note').classList.add('fall');click(.4);
+      setTimeout(()=>{$('menu').style.opacity=1;$('lcd').style.opacity=1;lcd(S.visits>1?'WELCOME<br>BACK':'HELLO<br>NIGHT OWL',1800);
+        const order=[...document.querySelectorAll('.slot')];order.forEach((s,i)=>setTimeout(()=>{s.classList.add('in');if(i%4===3)play('drop',{vol:.25})},i*(fast?40:90)));
+        setTimeout(()=>{$('hud').classList.add('on');clearTimeout(liveTimer);liveText(`ON AIR · ${listeners} listeners tuned in`);liveTimer=setTimeout(liveTick,6000)},order.length*(fast?40:90))},fast?200:700)},fast)},fast?300:2700)}
+$('tune').onclick=async()=>{A();await load();$('tune').disabled=true;staticOn(.35);
+  let i=0;const iv=setInterval(()=>{play('static',{vol:.35+Math.random()*.2,off:Math.random()*.5,dur:.25});if(++i>6)clearInterval(iv)},230);
+  needleTo(88.8);setTimeout(()=>{staticOn(0);$('gate').classList.add('hide');boot()},1800)};
+$('skip').onclick=async()=>{A();await load();needleTo(88.8);$('gate').classList.add('hide');boot(true)};
+function leave(){if(!$('lost').classList.contains('hide'))return;$('holo').classList.remove('on');$('after').classList.remove('on');beam();select(null);dimRows(null);menuOn(null);
+  clearTimeout(liveTimer);$('hud').classList.remove('on');mode='wide';setCam();humOn(false);$('haze').classList.remove('on');
+  [.4,.9,.15,.7,.08].forEach((b,i)=>setTimeout(()=>{bright(b);click(.4)},300+i*140));
+  setTimeout(()=>{const n=$('note');n.style.transition='none';n.classList.remove('fall');void n.offsetWidth;n.style.transition='';$('menu').style.opacity=0;$('lcd').style.opacity=0;
+    staticOn(.45);play('static',{vol:.6})},1100);
+  setTimeout(()=>{$('lost').classList.remove('hide');staticOn(.18)},1600)}
+$('again').onclick=async()=>{A();await load();staticOn(0);$('paper').classList.remove('tear');$('paper').style.height='0';boot(true)};
+
+sync();setCam();
+</script>
+</body>
+</html>
