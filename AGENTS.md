@@ -37,4 +37,5 @@ use the editor.
 - Admin role is granted on signup by matching `public.admin_emails`.
 - Orders are created only by the `place_order` RPC (prices/stock checked server-side, one transaction); guests read their orders via `guest_orders(ids)` from localStorage ids and `claim_orders` attaches them on sign-in.
 - Audio lives in `src/lib/audio.ts` (one AudioContext + master gain, buffers decoded on first click, mute in localStorage); the intro/exit/night-day sequence is phase state inside `_machine.tsx`, and hologram panels only open once phase is "on".
+- Secret code (D4·A1·D4) sets a localStorage flag passed to the 5-arg `place_order(..., p_secret)`, which appends a zero-price D1 bonus line without touching stock; `/orders/$no` opens the Orders panel highlighting that receipt.
 <!-- AGENT-MEMORY:END -->

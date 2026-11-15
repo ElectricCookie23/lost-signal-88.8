@@ -13,6 +13,7 @@ import { Route as MachineRouteImport } from './routes/_machine'
 import { Route as BoothRouteImport } from './routes/booth'
 import { Route as MachineIndexRouteImport } from './routes/_machine.index'
 import { Route as MachineViewRouteImport } from './routes/_machine.$view'
+import { Route as MachineOrdersNoRouteImport } from './routes/_machine.orders.$no'
 
 const MachineRoute = MachineRouteImport.update({
   id: '/_machine',
@@ -33,16 +34,23 @@ const MachineViewRoute = MachineViewRouteImport.update({
   path: '/$view',
   getParentRoute: () => MachineRoute,
 } as any)
+const MachineOrdersNoRoute = MachineOrdersNoRouteImport.update({
+  id: '/orders/$no',
+  path: '/orders/$no',
+  getParentRoute: () => MachineRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof MachineIndexRoute
   '/booth': typeof BoothRoute
   '/$view': typeof MachineViewRoute
+  '/orders/$no': typeof MachineOrdersNoRoute
 }
 export interface FileRoutesByTo {
   '/booth': typeof BoothRoute
   '/$view': typeof MachineViewRoute
   '/': typeof MachineIndexRoute
+  '/orders/$no': typeof MachineOrdersNoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -50,13 +58,20 @@ export interface FileRoutesById {
   '/booth': typeof BoothRoute
   '/_machine/$view': typeof MachineViewRoute
   '/_machine/': typeof MachineIndexRoute
+  '/_machine/orders/$no': typeof MachineOrdersNoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/booth' | '/$view'
+  fullPaths: '/' | '/booth' | '/$view' | '/orders/$no'
   fileRoutesByTo: FileRoutesByTo
-  to: '/booth' | '/$view' | '/'
-  id: '__root__' | '/_machine' | '/booth' | '/_machine/$view' | '/_machine/'
+  to: '/booth' | '/$view' | '/' | '/orders/$no'
+  id:
+    | '__root__'
+    | '/_machine'
+    | '/booth'
+    | '/_machine/$view'
+    | '/_machine/'
+    | '/_machine/orders/$no'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -94,17 +109,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MachineViewRouteImport
       parentRoute: typeof MachineRoute
     }
+    '/_machine/orders/$no': {
+      id: '/_machine/orders/$no'
+      path: '/orders/$no'
+      fullPath: '/orders/$no'
+      preLoaderRoute: typeof MachineOrdersNoRouteImport
+      parentRoute: typeof MachineRoute
+    }
   }
 }
 
 interface MachineRouteChildren {
   MachineViewRoute: typeof MachineViewRoute
   MachineIndexRoute: typeof MachineIndexRoute
+  MachineOrdersNoRoute: typeof MachineOrdersNoRoute
 }
 
 const MachineRouteChildren: MachineRouteChildren = {
   MachineViewRoute: MachineViewRoute,
   MachineIndexRoute: MachineIndexRoute,
+  MachineOrdersNoRoute: MachineOrdersNoRoute,
 }
 
 const MachineRouteWithChildren =

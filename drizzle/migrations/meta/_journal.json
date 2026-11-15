@@ -22,6 +22,13 @@
       "when": 1794774836299,
       "tag": "0002_money_two_decimals",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794776485386,
+      "tag": "0003_secret_code_bonus",
+      "breakpoints": true
     }
   ]
 }

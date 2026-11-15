@@ -26,7 +26,9 @@ import { PocketRadio } from "@/components/intro/PocketRadio";
 import { StaticOverlay } from "@/components/intro/StaticOverlay";
 import { OutOfOrderNote, SignDark } from "@/components/intro/MachineExtras";
 import { useOnAir } from "@/hooks/use-on-air";
-import { click, fadeOut, humOn, initMute, play, radio, setMuted, unlock, type Voice } from "@/lib/audio";
+import { click, fadeOut, humOn, humSpatial, initMute, lockIn, play, radio, setMuted, tunerStop, unlock, type Voice } from "@/lib/audio";
+import { Flashlight } from "@/components/intro/Flashlight";
+import { secretMatch } from "@/lib/secret";
 import { PRODUCT_BY_CODE, ROW_SLUGS } from "@/data/products";
 import { MOBILE_TICKER, SLOT_COLS, SLOT_ROWS, type CameraMode } from "@/lib/machine-layout";
 
@@ -58,15 +60,15 @@ function Machine() {
   const store = useMachineStore(auth.user?.id ?? null);
   const station = useStation();
   const navigate = useNavigate();
-  const { view } = useParams({ strict: false });
-  const urlPanel = parseView(view);
+  const { view, no } = useParams({ strict: false }) as { view?: string; no?: string };
+  const urlPanel: Panel | null = no ? { kind: "orders", highlight: no.toUpperCase() } : parseView(view);
   const [local, setLocal] = useState<Panel | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const [kicks, setKicks] = useState(0);
   const [shake, setShake] = useState<{ code: string; tick: number } | null>(null);
 
   // a URL change (navigation / back button) wins over cart/saved panels
-  useEffect(() => setLocal(null), [view]);
+  useEffect(() => setLocal(null), [view, no]);
 
   /* ---------- show: intro, exit, night/day ---------- */
   const air = useOnAir();
@@ -87,6 +89,10 @@ function Machine() {
   const [hazeOn, setHazeOn] = useState(false);
   const [humming, setHumming] = useState(false);
   const [staticOp, setStaticOp] = useState(0);
+  const [staticFade, setStaticFade] = useState(0.5);
+  const [secret, setSecret] = useState(false);
+  const [secretFlash, setSecretFlash] = useState(0);
+  const presses = useRef<{ code: string; t: number }[]>([]);
   const [glitch, setGlitch] = useState(false);
   const [muted, setMutedState] = useState(false);
   const [visits, setVisits] = useState(0);
@@ -97,7 +103,10 @@ function Machine() {
   useEffect(() => {
     setMutedState(initMute());
     reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    try { setVisits(Number(localStorage.getItem("ls888_visits") ?? 0)); } catch { /* blocked */ }
+    try {
+      setVisits(Number(localStorage.getItem("ls888_visits") ?? 0));
+      setSecret(localStorage.getItem("ls888_secret") === "1");
+    } catch { /* blocked */ }
     return clearTimers;
   }, []);
   useEffect(() => { humOn(humming && onAir); }, [humming, onAir]);
@@ -145,8 +154,8 @@ function Machine() {
   const close = useCallback(() => {
     setLocal(null);
     store.clearSelection();
-    if (view) navigate({ to: "/" });
-  }, [navigate, view, store]);
+    if (view || no) navigate({ to: "/" });
+  }, [navigate, view, no, store]);
 
   const openCart = () => {
     store.clearSelection();
@@ -166,7 +175,7 @@ function Machine() {
       setLocal({ kind: "cart" });
       return null;
     }
-    const r = await placeOrder(store.cart, ship, store.kicked, !!auth.user);
+    const r = await placeOrder(store.cart, ship, store.kicked, !!auth.user, secret);
     if (!r.ok) {
       if ("error" in r) return "The machine jammed. Try again.";
       for (const s of r.short) {
@@ -229,7 +238,8 @@ function Machine() {
     try { localStorage.setItem("ls888_visits", String(v)); } catch { /* blocked */ }
     setPhase("boot"); setLocal(null); setReceipt(null); store.clearSelection();
     setNoteFallen(false); setUiOn(false); setSlotsIn(false); setBarOn(false); setLit(false);
-    setBright(fast ? 0.08 : 0.25); setStaticOp(0); setHazeOn(false);
+    setBright(fast ? 0.08 : 0.25); setHazeOn(false);
+    if (fast) setStaticOp(0);
     const glide = !fast && !reduced.current;
     if (glide) { setIntro(true); later(() => { setCamDur(1.8); setIntro(false); }, 60); }
     else setCamDur(reduced.current ? 0 : 0.9);
@@ -251,18 +261,14 @@ function Machine() {
     }, glide ? 1900 : 300);
   };
 
-  const tuneIn = async (slide: () => void) => {
+  /** 88.8 locked (dial or button): snap, static floods to 100% for 0.4s, then the corridor fades in through it. */
+  const tuneIn = async () => {
     await unlock();
-    setStaticOp(0.35);
-    let i = 0;
-    const iv = setInterval(() => {
-      play("static", { vol: 0.35 + Math.random() * 0.2, off: Math.random() * 0.5, dur: 0.25 });
-      if (++i > 6) clearInterval(iv);
-    }, 230);
-    slide();
-    later(() => { setStaticOp(0); boot(false); }, 1600);
+    lockIn();
+    setStaticFade(0.2); setStaticOp(1);
+    later(() => { boot(false); setStaticFade(1.4); setStaticOp(0); }, 600);
   };
-  const skipIntro = async () => { await unlock(); boot(true); };
+  const skipIntro = async () => { await unlock(); tunerStop(); boot(true); };
 
   const leave = () => {
     if (phase !== "on") return;
@@ -377,6 +383,44 @@ function Machine() {
     openProduct(code);
   };
 
+  /** Keypad presses: D4 · A1 · D4 within 6s unlocks a free D1 with every order. */
+  const keypadPress = (code: string) => {
+    const now = Date.now();
+    presses.current = [...presses.current, { code, t: now }].slice(-3);
+    if (secretMatch(presses.current)) {
+      presses.current = [];
+      setSecret(true);
+      try { localStorage.setItem("ls888_secret", "1"); } catch { /* blocked */ }
+      store.flashLcd("SIGNAL\nFOUND", 1500);
+      later(() => { setSecretFlash((n) => n + 1); play("static", { vol: 0.6, off: Math.random() * 0.4, dur: 0.9 }); }, 250);
+      later(() => store.flashLcd("FREE D1\nWITH ORDER", 3200), 1600);
+      return;
+    }
+    pick(code);
+  };
+
+  // neon hum follows the cursor: panned by x, louder near the sign
+  useEffect(() => {
+    if (!humming) return;
+    let last = 0;
+    const h = (e: PointerEvent) => {
+      const now = performance.now();
+      if (now - last < 50) return;
+      last = now;
+      const r = document.querySelector(".sign-dark")?.getBoundingClientRect();
+      let near = 0;
+      if (r) {
+        const dx = Math.max(r.left - e.clientX, 0, e.clientX - r.right);
+        const dy = Math.max(r.top - e.clientY, 0, e.clientY - r.bottom);
+        near = 1 - Math.min(1, Math.hypot(dx, dy) / (window.innerHeight * 0.5));
+      }
+      humSpatial(e.clientX / window.innerWidth, near);
+    };
+    window.addEventListener("pointermove", h);
+    window.addEventListener("pointerdown", h);
+    return () => { window.removeEventListener("pointermove", h); window.removeEventListener("pointerdown", h); };
+  }, [humming]);
+
   const handleAdd = () => addWithCoin(store.selected);
 
   const lcdText = !onAir && store.lcdText.startsWith("CART ") ? "OFF AIR\nTILL 8PM" : store.lcdText;
@@ -387,7 +431,7 @@ function Machine() {
 
   return (
     <div className="min-h-screen overflow-hidden bg-background text-foreground">
-      <MachineStage mode={mode} row={row} rattle={rattle} intro={intro} duration={camDur} bright={bright * (onAir ? 1 : 0.4)} uiOn={uiOn} offAir={!onAir}>
+      <MachineStage mode={mode} row={row} rattle={rattle} intro={intro} duration={camDur} bright={bright * (onAir || phase === "on" || phase === "boot" ? 1 : 0.4)} uiOn={uiOn} offAir={!onAir}>
         <SignDark visible={!onAir || !lit || glitch} />
         <OutOfOrderNote fallen={noteFallen && onAir} />
         <GlassMenu
@@ -408,7 +452,7 @@ function Machine() {
           tipKey={`${mode}:${row}:${panel?.kind ?? ""}:${receipt ? 1 : 0}`}
         />
         <Lcd text={lcdText} />
-        <Keypad selected={store.selected} available={store.available} onSelect={pick} />
+        <Keypad selected={store.selected} available={store.available} onSelect={keypadPress} />
         <MachineButtons onAdd={handleAdd} onSave={store.toggleSave} onClear={close} />
         <PickupTray items={cartItems} onOpen={openCart} />
         <div className="mobile-ticker" style={{ ...MOBILE_TICKER }}>
@@ -419,6 +463,8 @@ function Machine() {
         {store.faller && <Faller faller={store.faller} onDone={() => { play("drop", { vol: 0.9 }); store.completeFall(); }} />}
       </MachineStage>
       <Atmosphere haze={hazeOn && onAir} />
+      <Flashlight active={!onAir && (phase === "on" || phase === "boot")} />
+      <div key={secretFlash} className={`secret-flash${secretFlash ? " is-on" : ""}`} aria-hidden />
       <Beam open={!!panel} />
       <HoloPanel
         panel={panel}
@@ -476,10 +522,10 @@ function Machine() {
       <Gate
         hidden={phase !== "gate"}
         welcome={visits > 0 ? `Welcome back, night owl.${store.cartCount ? ` Your cart still has ${store.cartCount} item${store.cartCount > 1 ? "s" : ""}.` : ""}` : null}
-        onTune={(slide) => void tuneIn(slide)}
+        onLock={() => void tuneIn()}
         onSkip={() => void skipIntro()}
       />
-      <StaticOverlay opacity={staticOp} />
+      <StaticOverlay opacity={staticOp} fade={staticFade} />
       <SignalLost shown={phase === "lost"} onAgain={() => void again()} />
       <Outlet />
     </div>

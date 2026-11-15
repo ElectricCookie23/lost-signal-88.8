@@ -1,10 +1,10 @@
 import type { Order } from "@/lib/orders";
-import { fmtDate } from "@/lib/orders";
+import { fmtDate, receiptUrl } from "@/lib/orders";
 
 /** 80mm thermal receipt, following receiptPDF() in the reference prototype. */
 export async function receiptPDF(o: Order) {
   const { jsPDF } = await import("jspdf");
-  const h = 150 + o.items.length * 10;
+  const h = 186 + o.items.length * 10;
   const d = new jsPDF({ unit: "mm", format: [80, h] });
   let y = 12;
   const L = 6, R = 74, Q = 52;
@@ -38,7 +38,7 @@ export async function receiptPDF(o: Order) {
     while (d.getTextWidth(name) > maxW && name.length > 4) name = name.slice(0, -1);
     if (name !== `${i.code} ${i.name}`) name = name.slice(0, -1) + "…";
     tx(name, L); tx(i.qty, Q, "right"); tx((i.price * i.qty).toFixed(2), R, "right"); y += 4;
-    d.setFontSize(7.5); tx(`   @ ${i.price.toFixed(2)} each`, L); d.setFontSize(9); y += 5.5;
+    d.setFontSize(7.5); tx(i.bonus ? `   ${i.bonus}` : `   @ ${i.price.toFixed(2)} each`, L); d.setFontSize(9); y += 5.5;
   }
   rule();
   tx("Subtotal", L); tx(o.subtotal.toFixed(2), R, "right"); y += 4.5;
@@ -57,7 +57,10 @@ export async function receiptPDF(o: Order) {
     if (bx > 68) break;
   }
   y += 16;
-  tx(o.order_no, 40, "center"); y += 6;
+  tx(o.order_no, 40, "center"); y += 3;
+  const { toDataURL } = await import("qrcode");
+  d.addImage(await toDataURL(receiptUrl(o.order_no), { margin: 0, width: 240 }), "PNG", 25, y, 30, 30);
+  y += 34;
   tx("KEEP THIS RECEIPT.", 40, "center"); y += 4;
   tx("OR DON'T. WE'RE PIRATES.", 40, "center"); y += 5;
   tx("See you at 8.", 40, "center");

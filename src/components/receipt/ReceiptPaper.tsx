@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { fmtDate, type Order } from "@/lib/orders";
+import { toDataURL } from "qrcode";
+import { fmtDate, receiptUrl, type Order } from "@/lib/orders";
 import { cn } from "@/lib/utils";
 
 /** Thermal paper strip feeding out of the receipt slot (image coords x1763 y762, w104). */
 export function ReceiptPaper({ order, torn }: { order: Order; torn: boolean }) {
   const inner = useRef<HTMLDivElement>(null);
   const [h, setH] = useState(0);
+  const [qr, setQr] = useState("");
+  useEffect(() => { void toDataURL(receiptUrl(order.order_no), { margin: 0, width: 160 }).then(setQr); }, [order.order_no]);
   useEffect(() => {
     setH(0);
     // Paper ends exactly at the inner block, whose bottom padding is the 10px margin.
@@ -26,10 +29,10 @@ export function ReceiptPaper({ order, torn }: { order: Order; torn: boolean }) {
         <div>ORDER {order.order_no}</div>
         <div>{fmtDate(order.created_at)}</div>
         <hr />
-        {order.items.map((i) => (
-          <div key={i.code} className="row">
+        {order.items.map((i, n) => (
+          <div key={n} className="row">
             <span>
-              {i.code} {i.name.toUpperCase()}
+              {i.code} {i.bonus ? `${i.bonus}` : i.name.toUpperCase()}
               {i.qty > 1 ? ` x${i.qty}` : ""}
             </span>
             <span>{(i.price * i.qty).toFixed(2)}</span>
@@ -53,6 +56,7 @@ export function ReceiptPaper({ order, torn }: { order: Order; torn: boolean }) {
           <br />
           OR DON&apos;T. WE&apos;RE PIRATES.
         </div>
+        {qr && <img src={qr} alt={`QR link to order ${order.order_no}`} className="receipt-qr" />}
       </div>
     </div>
   );

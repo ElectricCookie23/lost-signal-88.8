@@ -12,7 +12,7 @@ export type Panel =
   | { kind: "cart" }
   | { kind: "saved" }
   | { kind: "signin" }
-  | { kind: "orders" }
+  | { kind: "orders"; highlight?: string }
   | { kind: "checkout" };
 
 interface HoloPanelProps {
@@ -125,7 +125,7 @@ function SignInView() {
   );
 }
 
-function OrdersView({ signedIn, onBuyAgain }: { signedIn: boolean; onBuyAgain?: ((o: Order) => void) | undefined }) {
+function OrdersView({ signedIn, onBuyAgain, highlight }: { signedIn: boolean; onBuyAgain?: ((o: Order) => void) | undefined; highlight?: string | undefined }) {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [msg, setMsg] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -137,11 +137,17 @@ function OrdersView({ signedIn, onBuyAgain }: { signedIn: boolean; onBuyAgain?: 
       <p className="holo-copy mt-1.5 mb-1">Every receipt the machine has printed for you.</p>
       {orders == null ? (
         <p className="holo-lcd mt-3.5">LOADING…</p>
+      ) : highlight && !orders.some((o) => o.order_no === highlight) ? (
+        <p className="holo-copy mt-3">This receipt belongs to someone else.</p>
       ) : orders.length === 0 ? (
         <p className="holo-copy mt-3">No orders yet. The machine is waiting.</p>
       ) : (
         orders.map((o) => (
-          <div key={o.id} className="holo-order">
+          <div
+            key={o.id}
+            className={`holo-order${o.order_no === highlight ? " is-hl" : ""}`}
+            ref={o.order_no === highlight ? (el) => el?.scrollIntoView({ block: "center" }) : undefined}
+          >
             <div className="holo-order-top">
               <span className="holo-lcd">{o.order_no}</span>
               <span>QAR {o.total.toFixed(2)}</span>
@@ -150,8 +156,8 @@ function OrdersView({ signedIn, onBuyAgain }: { signedIn: boolean; onBuyAgain?: 
               {fmtDate(o.created_at)} · {(() => { const n = o.items.reduce((a, i) => a + i.qty, 0); return `${n} ${n === 1 ? "item" : "items"}`; })()}
             </div>
             <div className="holo-order-thumbs">
-              {o.items.map((i) => (
-                <img key={i.code} src={`/products/${i.code}.jpg`} alt={i.name} title={`${i.code} ${i.name}`} />
+              {o.items.map((i, n) => (
+                <img key={n} src={`/products/${i.code}.jpg`} alt={i.name} title={`${i.code} ${i.name}`} />
               ))}
             </div>
             <div className="holo-acts mt-1.5">
@@ -599,7 +605,7 @@ export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, on
         <CheckoutView store={store} email={email} userName={userName} onRattle={onRattle} onPrint={onPrint} />
       )}
       {p?.kind === "signin" && <SignInView />}
-      {p?.kind === "orders" && <OrdersView signedIn={signedIn} onBuyAgain={onBuyAgain} />}
+      {p?.kind === "orders" && <OrdersView signedIn={signedIn} onBuyAgain={onBuyAgain} highlight={p.highlight} />}
     </aside>
   );
 }

@@ -12,17 +12,16 @@ const FILES = {
   flicker: "/audio/sfx_flicker_on.mp3",
   neon: "/audio/loop_neon_buzz.wav",
   music: "/audio/music_lofi_bed.mp3",
+  weather: "/audio/stations/weather.mp3",
+  song: "/audio/stations/song.mp3",
+  news: "/audio/stations/news.mp3",
 } as const;
 export type Sfx = keyof typeof FILES;
-
-/** DJ voice lines played over the radio every ~90s. Add file URLs here later. */
-export const DJ_LINES: string[] = [];
 
 const MUTE_KEY = "ls888_muted";
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 const buf: Partial<Record<Sfx, AudioBuffer>> = {};
-const djBuf: AudioBuffer[] = [];
 let loading: Promise<void> | null = null;
 let muted = false;
 const listeners = new Set<() => void>();
@@ -61,9 +60,6 @@ export function unlock(): Promise<void> {
       ...Object.entries(FILES).map(async ([k, f]) => {
         try { buf[k as Sfx] = await a.decodeAudioData(await (await fetch(f)).arrayBuffer()); } catch { /* missing */ }
       }),
-      ...DJ_LINES.map(async (f) => {
-        try { djBuf.push(await a.decodeAudioData(await (await fetch(f)).arrayBuffer())); } catch { /* missing */ }
-      }),
     ]).then(() => undefined);
   }
   return loading;
@@ -98,16 +94,85 @@ export const click = (vol = 0.35) => play("static", { vol, off: Math.random() * 
 
 /* ---------- neon hum ---------- */
 let hum: Voice | null = null;
+let humPan: StereoPannerNode | null = null;
+let humSpace: GainNode | null = null;
 export function humOn(on: boolean) {
-  if (on && !hum) hum = play("neon", { vol: 0.25, loop: true });
-  else if (!on && hum) { fadeOut(hum, 0.6); hum = null; }
+  if (on && !hum && ctx && master && buf.neon) {
+    const src = ctx.createBufferSource();
+    src.buffer = buf.neon; src.loop = true;
+    const gain = ctx.createGain(); gain.gain.value = 0.25;
+    humSpace = ctx.createGain(); humSpace.gain.value = 1;
+    humPan = ctx.createStereoPanner();
+    src.connect(gain).connect(humSpace).connect(humPan).connect(master);
+    src.start();
+    hum = { src, gain };
+  } else if (!on && hum) { fadeOut(hum, 0.6); hum = null; }
+}
+/** Spatial neon: pan −0.6…0.6 by cursor x (0…1); gain 1…1.5 by closeness to the sign (0…1). Smoothed ~0.3s. */
+export function humSpatial(x: number, near: number) {
+  if (!ctx || !humPan || !humSpace) return;
+  const t = ctx.currentTime;
+  humPan.pan.setTargetAtTime(Math.max(-0.6, Math.min(0.6, (x * 2 - 1) * 0.6)), t, 0.1);
+  humSpace.gain.setTargetAtTime(1 + 0.5 * Math.max(0, Math.min(1, near)), t, 0.1);
+}
+
+/* ---------- FM tuner on the Tune In screen ---------- */
+export const STATIONS: { f: number; k: Sfx }[] = [
+  { f: 92.4, k: "weather" },
+  { f: 97.1, k: "song" },
+  { f: 101.4, k: "news" },
+];
+export const HOME = 88.8;
+/** Pure mixing rule, exported for tests: static + per-station volumes at a frequency. */
+export function tunerMix(f: number) {
+  const d = Math.abs(f - HOME);
+  const homeFade = d >= 1 ? 1 : d <= 0.15 ? 0 : (d - 0.15) / 0.85;
+  const st = STATIONS.map((s) => {
+    const e = Math.abs(f - s.f);
+    return e >= 0.4 ? 0 : 1 - e / 0.4;
+  });
+  return { static: homeFade * (1 - Math.max(0, ...st) * 0.6), stations: st };
+}
+let tuner: { stat: Voice | null; st: (Voice | null)[] } | null = null;
+export function tunerStart(f: number) {
+  if (tuner || !ctx) return;
+  tuner = {
+    stat: play("static", { vol: 0, loop: true }),
+    st: STATIONS.map((s) => play(s.k, { vol: 0, loop: true })),
+  };
+  tunerSet(f);
+}
+export function tunerSet(f: number) {
+  if (!tuner || !ctx) return;
+  const m = tunerMix(f);
+  const t = ctx.currentTime;
+  tuner.stat?.gain.gain.setTargetAtTime(0.35 * m.static, t, 0.04);
+  tuner.st.forEach((v, i) => v?.gain.gain.setTargetAtTime(0.22 * (m.stations[i] ?? 0), t, 0.06));
+}
+export function tunerStop(t = 0.05) {
+  if (!tuner) return;
+  fadeOut(tuner.stat, t);
+  tuner.st.forEach((v) => fadeOut(v, t));
+  tuner = null;
+}
+/** 88.8 locks: snap, static cuts, 2s of the lofi bed swells and fades back out. */
+export function lockIn() {
+  tunerStop(0.03);
+  click(0.7);
+  if (!ctx) return;
+  const v = play("music", { vol: 0, dur: 2.2 });
+  if (!v) return;
+  const t = ctx.currentTime;
+  v.gain.gain.setValueAtTime(0, t);
+  v.gain.gain.linearRampToValueAtTime(0.5, t + 0.6);
+  v.gain.gain.linearRampToValueAtTime(0.5, t + 1.3);
+  v.gain.gain.linearRampToValueAtTime(0, t + 2.1);
 }
 
 /* ---------- radio ---------- */
 let radioOn = false;
 let music: Voice | null = null;
 let radioTimer: ReturnType<typeof setTimeout> | null = null;
-let djTimer: ReturnType<typeof setInterval> | null = null;
 export const isRadioOn = () => radioOn;
 
 function playMusic() {
@@ -131,13 +196,8 @@ export async function radio(on: boolean) {
     if (!radioOn) return;
     play("static", { vol: 0.4, dur: 1 });
     radioTimer = setTimeout(playMusic, 1000);
-    djTimer = setInterval(() => {
-      const b = djBuf[Math.floor(Math.random() * djBuf.length)];
-      if (b && music) start(b, { vol: 0.9 });
-    }, 90_000);
   } else {
     if (radioTimer) clearTimeout(radioTimer);
-    if (djTimer) clearInterval(djTimer);
     fadeOut(music, 0.8);
     music = null;
   }

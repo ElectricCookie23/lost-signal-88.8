@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 /** Full-screen canvas TV static (teal/orange tinted noise + glitch lines). Runs only while visible. */
-export function StaticOverlay({ opacity }: { opacity: number }) {
+export function StaticOverlay({ opacity, fade = 0.5 }: { opacity: number; fade?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     if (opacity <= 0) return;
@@ -28,5 +28,5 @@ export function StaticOverlay({ opacity }: { opacity: number }) {
     loop();
     return () => cancelAnimationFrame(raf);
   }, [opacity > 0]); // eslint-disable-line react-hooks/exhaustive-deps
-  return <canvas ref={ref} width={320} height={180} aria-hidden className="static-overlay" style={{ opacity }} />;
+  return <canvas ref={ref} width={320} height={180} aria-hidden className="static-overlay" style={{ opacity, transitionDuration: `${fade}s` }} />;
 }

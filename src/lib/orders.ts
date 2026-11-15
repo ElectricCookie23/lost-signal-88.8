@@ -5,6 +5,7 @@ export interface OrderItem {
   name: string;
   price: number;
   qty: number;
+  bonus?: string;
 }
 export interface Shipping {
   name: string;
@@ -27,6 +28,9 @@ export interface Order {
 }
 
 /** Round money to 2 decimals. */
+/** Public link printed as a QR code on every receipt. */
+export const receiptUrl = (no: string) => `https://lost-signal-blackout.lovable.app/orders/${no}`;
+
 export const money = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 
 /** Prefer the 2-decimal amount columns; fall back to the old whole-riyal ones. */
@@ -74,6 +78,7 @@ export async function placeOrder(
   ship: Shipping,
   kicked: boolean,
   signedIn: boolean,
+  secret = false,
 ): Promise<PlaceResult> {
   const items = Object.entries(cart).map(([code, qty]) => ({ code, qty }));
   const { data, error } = await supabase.rpc("place_order", {
@@ -81,6 +86,7 @@ export async function placeOrder(
     p_email: ship.email,
     p_shipping: { name: ship.name, address: ship.address, city: ship.city, country: ship.country },
     p_kicked: kicked,
+    p_secret: secret,
   });
   if (error) return { ok: false, error: error.message };
   const r = data as unknown as { ok: boolean; order?: Order; short?: { code: string; stock: number }[] };
@@ -94,7 +100,13 @@ export async function placeOrder(
 export async function fetchOrders(signedIn: boolean): Promise<Order[]> {
   if (signedIn) {
     const { data } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
-    return ((data ?? []) as unknown[]).map(norm);
+    const mine = ((data ?? []) as unknown[]).map(norm);
+    // plus receipts printed on this device under another email
+    const ids = guestOrderIds();
+    if (!ids.length) return mine;
+    const { data: g } = await supabase.rpc("guest_orders", { p_ids: ids });
+    const extra = ((g ?? []) as unknown[]).map(norm).filter((o) => !mine.some((m) => m.id === o.id));
+    return [...mine, ...extra].sort((a, b) => b.created_at.localeCompare(a.created_at));
   }
   const ids = guestOrderIds();
   if (!ids.length) return [];

@@ -318,15 +318,26 @@ export type Database = {
         }
         Returns: boolean
       }
-      place_order: {
-        Args: {
-          p_email: string
-          p_items: Json
-          p_kicked: boolean
-          p_shipping: Json
-        }
-        Returns: Json
-      }
+      place_order:
+        | {
+            Args: {
+              p_email: string
+              p_items: Json
+              p_kicked: boolean
+              p_shipping: Json
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_email: string
+              p_items: Json
+              p_kicked: boolean
+              p_secret: boolean
+              p_shipping: Json
+            }
+            Returns: Json
+          }
       refill_all: { Args: never; Returns: undefined }
     }
     Enums: {
