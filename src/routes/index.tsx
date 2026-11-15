@@ -9,6 +9,9 @@ import { MachineButtons } from "@/components/machine/MachineButtons";
 import { PickupTray } from "@/components/machine/PickupTray";
 import { Faller } from "@/components/machine/Faller";
 import { Atmosphere } from "@/components/machine/Atmosphere";
+import { MobileDock } from "@/components/machine/MobileDock";
+import { ProductSheet } from "@/components/machine/ProductSheet";
+import { useState } from "react";
 import { TopBar } from "@/components/TopBar";
 import { SLOT_COLS, SLOT_ROWS } from "@/lib/machine-layout";
 
@@ -36,6 +39,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const store = useMachineStore();
+  const [viewing, setViewing] = useState<string | null>(null);
 
   const cartItems = Object.entries(store.cart).flatMap(([code, qty]) =>
     Array.from({ length: qty }, () => code),
@@ -64,6 +68,7 @@ function Index() {
           selected={store.selected}
           available={store.available}
           onSelect={store.select}
+          onOpen={setViewing}
         />
         <Lcd text={store.lcdText} />
         <Keypad
@@ -80,6 +85,16 @@ function Index() {
         {store.faller && <Faller faller={store.faller} onDone={store.completeFall} />}
       </MachineStage>
       <Atmosphere />
+      <MobileDock
+        lcdText={store.lcdText}
+        selected={store.selected}
+        isSaved={!!store.selected && store.saved.includes(store.selected)}
+        available={store.available}
+        onSelect={store.select}
+        onAdd={handleAdd}
+        onSave={store.toggleSave}
+      />
+      {viewing && <ProductSheet code={viewing} onClose={() => setViewing(null)} />}
       <TopBar cartCount={store.cartCount} savedCount={store.saved.length} />
     </div>
   );

@@ -30,11 +30,16 @@ export const TRAY = { left: 942, top: 952, width: 652, height: 106 };
 export type CameraMode = "wide" | "focus" | "row" | "receipt";
 
 export function viewRect(mode: CameraMode, row: number | null, mobile: boolean): [number, number, number, number] {
+  // phones: glass (menu strip + 4x4 slots + tray) spans the full screen width
+  if (mobile) return [866, 140, 762, 925];
   if (mode === "receipt") return mobile ? [1700, 700, 230, 300] : [1650, 690, 360, 340];
   if (mode === "row" && row != null) return [860, (SLOT_ROWS[row] ?? 0) - 70, 1060, 310];
   // wide + focus share the same rect; only the target screen area differs
   return mobile ? [860, 250, 780, 700] : [740, 0, 1210, 1152];
 }
+
+/** Height of the fixed bottom control dock on phones (CSS px). */
+export const MOBILE_DOCK_H = 92;
 
 export interface ScreenArea {
   x: number;
@@ -45,7 +50,8 @@ export interface ScreenArea {
 
 /** The part of the screen a view should fit into. */
 export function targetArea(mode: CameraMode, vw: number, vh: number, mobile: boolean): ScreenArea {
-  const topBar = mobile ? 48 : 56;
+  const topBar = mobile ? 52 : 56;
+  if (mobile) return { x: 0, y: topBar, w: vw, h: vh - topBar - MOBILE_DOCK_H };
   if (mode === "wide" || mode === "receipt") {
     return { x: 0, y: topBar, w: vw, h: vh - topBar };
   }
@@ -80,7 +86,8 @@ export function computeCamera(
   let s = Math.min(a.w / w, a.h / h);
   if (!mobile) s = Math.max(s, vw / STAGE_W, vh / STAGE_H);
   let tx = a.x + (a.w - w * s) / 2 - x * s;
-  let ty = a.y + (a.h - h * s) / 2 - y * s;
+  // phones: top-align right under the top bar; leftover space shows the backdrop
+  let ty = mobile ? a.y - y * s : a.y + (a.h - h * s) / 2 - y * s;
   if (!mobile) {
     tx = Math.min(0, Math.max(vw - STAGE_W * s, tx));
     ty = Math.min(a.y, Math.max(vh - STAGE_H * s, ty));

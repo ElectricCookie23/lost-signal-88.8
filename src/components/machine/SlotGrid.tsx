@@ -8,6 +8,11 @@ interface SlotGridProps {
   selected: string | null;
   available: (code: string) => number;
   onSelect: (code: string) => void;
+  onOpen: (code: string) => void;
+}
+
+function isTouch() {
+  return typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
 }
 
 function stockLabel(n: number) {
@@ -20,12 +25,14 @@ function Slot({
   selected,
   avail,
   onSelect,
+  onOpen,
 }: {
   product: Product;
   index: number;
   selected: boolean;
   avail: number;
   onSelect: (code: string) => void;
+  onOpen: (code: string) => void;
 }) {
   const col = index % 4;
   const row = Math.floor(index / 4);
@@ -38,8 +45,8 @@ function Slot({
       aria-label={`${product.code} ${product.name}, QAR ${product.price}, ${soldOut ? "sold out" : stockLabel(avail).toLowerCase()}`}
       aria-pressed={selected}
       disabled={soldOut}
-      onClick={() => onSelect(product.code)}
-      onMouseEnter={() => setHovered(true)}
+      onClick={() => (selected && isTouch() ? onOpen(product.code) : onSelect(product.code))}
+      onMouseEnter={() => !isTouch() && setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={cn("machine-slot group", selected && "is-selected", soldOut && "is-soldout")}
       style={{
@@ -75,7 +82,7 @@ function Slot({
   );
 }
 
-export function SlotGrid({ selected, available, onSelect }: SlotGridProps) {
+export function SlotGrid({ selected, available, onSelect, onOpen }: SlotGridProps) {
   // Remount the grid once on first paint so the drop-in stagger plays after
   // the stage image has had a chance to load.
   const [ready, setReady] = useState(false);
@@ -92,6 +99,7 @@ export function SlotGrid({ selected, available, onSelect }: SlotGridProps) {
           selected={selected === p.code}
           avail={available(p.code)}
           onSelect={onSelect}
+          onOpen={onOpen}
         />
       ))}
     </>
