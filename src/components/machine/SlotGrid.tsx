@@ -42,13 +42,14 @@ function Slot({
 }) {
   const col = index % 4;
   const row = Math.floor(index / 4);
-  const soldOut = product.stock === 0 || avail === 0;
+  const soldOut = product.stock === 0;
+  const allInCart = !soldOut && avail === 0;
   const [hovered, setHovered] = useState(false);
 
   return (
     <motion.button
       type="button"
-      aria-label={`${product.code} ${product.name}, QAR ${product.price}, ${soldOut ? "sold out" : stockLabel(avail).toLowerCase()}`}
+      aria-label={`${product.code} ${product.name}, QAR ${product.price}, ${soldOut ? "sold out" : allInCart ? "all in your cart" : stockLabel(avail).toLowerCase()}`}
       aria-pressed={selected}
       disabled={soldOut}
       onClick={() => (selected && isTouch() ? onOpen(product.code) : onSelect(product.code))}
@@ -75,7 +76,7 @@ function Slot({
         damping: 19,
       }}
     >
-      <span key={shakeTick} className={cn("slot-shake", shakeTick > 0 && "is-shaking")}>
+      <span key={shakeTick} className={cn("slot-shake", shakeTick > 0 && "is-shaking", dim && "is-dim")}>
       <span className="slot-photo">
         <img src={`/products/${product.code}.jpg`} alt="" draggable={false} />
         <img className="slot-hover-img" src={`/hover/${product.code}.jpg`} alt="" draggable={false} />
@@ -83,7 +84,7 @@ function Slot({
       {soldOut && <span className="soldout-stamp">SOLD OUT</span>}
       <span className="slot-chip">
         <b>{product.code}</b>
-        <i className={cn(avail <= 3 && "low")}>{stockLabel(avail)}</i>
+        <i className={cn(avail <= 3 && "low")}>{allInCart ? "IN CART" : stockLabel(avail)}</i>
       </span>
       {hovered && !soldOut && (
         <span className="slot-tip">

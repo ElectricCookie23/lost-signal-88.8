@@ -156,7 +156,9 @@ export function useMachineStore() {
     (selected && selectedProduct
       ? `${selected} · QAR ${selectedProduct.price}\n${
           available(selected) === 0
-            ? "SOLD OUT"
+            ? selectedProduct.stock > 0
+              ? "IN CART"
+              : "SOLD OUT"
             : available(selected) <= 3
               ? `${available(selected)} LEFT`
               : `${available(selected)} IN`

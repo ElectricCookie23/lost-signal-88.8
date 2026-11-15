@@ -34,8 +34,9 @@ export function viewRect(mode: CameraMode, row: number | null, mobile: boolean):
   // phones: glass (menu strip + 4x4 slots + tray) spans the full screen width
   if (mobile) return [858, 25, 862, 1090]; // sign → tray + ticker
   if (mode === "receipt") return mobile ? [1700, 700, 230, 300] : [1650, 690, 360, 340];
-  if (mode === "row" && row != null) return [860, (SLOT_ROWS[row] ?? 0) - 70, 1060, 310];
-  // wide + focus share the same rect; only the target screen area differs
+  if (mode === "row" && row != null) return [860, (SLOT_ROWS[row] ?? 0) - 70, 1100, 310];
+  // focus: whole machine incl. control panel (to x≈1960)
+  if (mode === "focus") return [740, 0, 1225, 1152];
   return mobile ? [860, 250, 780, 700] : [740, 0, 1210, 1152];
 }
 
@@ -60,8 +61,9 @@ export function targetArea(mode: CameraMode, vw: number, vh: number, mobile: boo
     return { x: 0, y: 44, w: vw, h: vh * 0.36 - 44 };
   }
   // focus/row: left 58% of the screen, right side reserved for the hologram (phase 2)
-  const right = Math.min(600, vw * 0.4) + vw * 0.03;
-  return { x: 0, y: 56, w: vw - right, h: vh - 66 };
+  // hologram: right 2.5vw, width min(600, 40vw); keep a 24px gap to its left edge
+  const right = Math.min(600, vw * 0.4) + vw * 0.025 + 24;
+  return { x: 0, y: 64, w: vw - right, h: vh - 64 - 22 };
 }
 
 export interface Camera {
@@ -85,11 +87,13 @@ export function computeCamera(
   const [x, y, w, h] = viewRect(mode, row, mobile);
   const a = targetArea(mode, vw, vh, mobile);
   let s = Math.min(a.w / w, a.h / h);
-  if (!mobile) s = Math.max(s, vw / STAGE_W, vh / STAGE_H);
+  // only the wide view must cover the viewport; focus/row may shrink onto the backdrop
+  const cover = !mobile && (mode === "wide" || mode === "receipt");
+  if (cover) s = Math.max(s, vw / STAGE_W, vh / STAGE_H);
   let tx = a.x + (a.w - w * s) / 2 - x * s;
   // phones: top-align right under the top bar; leftover space shows the backdrop
   let ty = a.y + (a.h - h * s) / 2 - y * s;
-  if (!mobile) {
+  if (cover) {
     tx = Math.min(0, Math.max(vw - STAGE_W * s, tx));
     ty = Math.min(a.y, Math.max(vh - STAGE_H * s, ty));
   }

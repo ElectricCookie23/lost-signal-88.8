@@ -44,7 +44,7 @@ function ProductList({ codes, store, onOpen }: { codes: string[]; store: Machine
             <img src={`/products/${c}.jpg`} alt="" />
             <span className="holo-list-text">
               <span className="holo-lcd">
-                {c} · {n === 0 ? "SOLD OUT" : n <= 3 ? `${n} LEFT` : `${n} IN`}
+                {c} · {n === 0 ? (p.stock > 0 ? "IN CART" : "SOLD OUT") : n <= 3 ? `${n} LEFT` : `${n} IN`}
               </span>
               <span className="holo-list-name">{p.name}</span>
             </span>
@@ -113,7 +113,7 @@ function ProductView({ code, store, onAdd, onOpenCart }: { code: string; store: 
             setQty(1);
           }}
         >
-          {avail ? "Add to cart" : "Sold out"}
+          {avail || p.stock > 0 ? "Add to cart" : "Sold out"}
           <span className="holo-sub">drops into the tray</span>
         </button>
         <button type="button" className="btn-secondary holo-save" onClick={() => store.toggleSave(code)}>

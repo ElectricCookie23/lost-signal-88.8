@@ -1046,3 +1046,5 @@
 @media (max-width: 760px) {
   .holo, .holo-beam { display: none; }
 }
+.slot-shake { transition: opacity 0.35s; }
+.slot-shake.is-dim { opacity: 0.22; }
