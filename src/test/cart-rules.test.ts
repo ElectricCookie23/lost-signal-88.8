@@ -4,10 +4,10 @@ import { parseView } from "@/routes/_machine";
 
 describe("cart rules", () => {
   it("KICKIT is exactly 10% to the cent (QAR 25 -> 2.50 off)", () => {
-    const prev = PRODUCT_BY_CODE.A1.price;
-    PRODUCT_BY_CODE.A1.price = 25;
+    const prev = PRODUCT_BY_CODE["A1"]!.price;
+    PRODUCT_BY_CODE["A1"]!.price = 25;
     expect(cartTotals({ A1: 1 }, true)).toEqual({ subtotal: 25, discount: 2.5, total: 22.5 });
-    PRODUCT_BY_CODE.A1.price = prev;
+    PRODUCT_BY_CODE["A1"]!.price = prev;
   });
   it("applies no discount before C4 is kicked", () => {
     expect(cartTotals({ B1: 2 }, false)).toEqual({ subtotal: 440, discount: 0, total: 440 });
