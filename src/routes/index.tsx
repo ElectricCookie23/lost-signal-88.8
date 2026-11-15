@@ -13,7 +13,7 @@ import { MobileDock } from "@/components/machine/MobileDock";
 import { ProductSheet } from "@/components/machine/ProductSheet";
 import { useState } from "react";
 import { TopBar } from "@/components/TopBar";
-import { SLOT_COLS, SLOT_ROWS } from "@/lib/machine-layout";
+import { MOBILE_TICKER, SLOT_COLS, SLOT_ROWS } from "@/lib/machine-layout";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -82,6 +82,10 @@ function Index() {
           onClear={store.clearSelection}
         />
         <PickupTray items={cartItems} />
+        <div className="mobile-ticker" style={{ ...MOBILE_TICKER }}>
+          <span className="live-dot" aria-hidden />
+          ON AIR · 11 listeners tuned in
+        </div>
         {store.faller && <Faller faller={store.faller} onDone={store.completeFall} />}
       </MachineStage>
       <Atmosphere />

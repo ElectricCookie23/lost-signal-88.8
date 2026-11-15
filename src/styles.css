@@ -737,6 +737,23 @@
 }
 
 /* ---------- Mobile top bar, dock, keypad, product view ---------- */
+.mobile-ticker {
+  position: absolute;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: VT323, monospace;
+  font-size: 34px;
+  color: var(--ls-static);
+  white-space: nowrap;
+}
+
+.mobile-ticker .live-dot {
+  width: 14px;
+  height: 14px;
+  margin-right: 12px;
+}
+
 .topbar-mobile,
 .mobile-dock,
 .mobile-keypad {
@@ -934,7 +951,8 @@
   .topbar {
     height: 52px;
   }
-  .mobile-dock {
+  .mobile-dock,
+  .mobile-ticker {
     display: flex;
   }
   .mobile-keypad {

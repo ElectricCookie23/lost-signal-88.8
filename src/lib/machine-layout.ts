@@ -24,6 +24,7 @@ export const LCD = { left: 1705, top: 276, width: 180, height: 84 };
 export const BTN_ADD = { left: 1705, top: 597, width: 187, height: 46 };
 export const BTN_SAVE = { left: 1703, top: 662, width: 92, height: 45 };
 export const BTN_CLEAR = { left: 1810, top: 662, width: 86, height: 45 };
+export const MOBILE_TICKER = { left: 866, top: 1066, width: 762, height: 44 };
 export const TRAY = { left: 942, top: 952, width: 652, height: 106 };
 
 /** Camera view rectangles in image space: [x, y, w, h] */
@@ -31,7 +32,7 @@ export type CameraMode = "wide" | "focus" | "row" | "receipt";
 
 export function viewRect(mode: CameraMode, row: number | null, mobile: boolean): [number, number, number, number] {
   // phones: glass (menu strip + 4x4 slots + tray) spans the full screen width
-  if (mobile) return [866, 140, 762, 925];
+  if (mobile) return [858, 25, 862, 1090]; // sign → tray + ticker
   if (mode === "receipt") return mobile ? [1700, 700, 230, 300] : [1650, 690, 360, 340];
   if (mode === "row" && row != null) return [860, (SLOT_ROWS[row] ?? 0) - 70, 1060, 310];
   // wide + focus share the same rect; only the target screen area differs
@@ -87,7 +88,7 @@ export function computeCamera(
   if (!mobile) s = Math.max(s, vw / STAGE_W, vh / STAGE_H);
   let tx = a.x + (a.w - w * s) / 2 - x * s;
   // phones: top-align right under the top bar; leftover space shows the backdrop
-  let ty = mobile ? a.y - y * s : a.y + (a.h - h * s) / 2 - y * s;
+  let ty = a.y + (a.h - h * s) / 2 - y * s;
   if (!mobile) {
     tx = Math.min(0, Math.max(vw - STAGE_W * s, tx));
     ty = Math.min(a.y, Math.max(vh - STAGE_H * s, ty));
