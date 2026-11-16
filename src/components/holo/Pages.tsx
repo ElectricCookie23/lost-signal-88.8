@@ -101,9 +101,14 @@ function NightLog() {
         {NIGHT_LOG.map(([f, t, c], i) =>
           open(f) ? (
             <figure key={f} className={fresh === f ? "is-new" : undefined}>
-              <button type="button" onClick={() => setBig(i)} aria-label={`Open photo: ${t}`}>
-                <img src={`/nightlog/${f}.jpg`} alt={`${t} ${c}`} loading="lazy" />
-              </button>
+              <div className="log-photo">
+                <button type="button" onClick={() => setBig(i)} aria-label={`Open photo: ${t}`}>
+                  <img src={`/nightlog/${f}.jpg`} alt={`${t} ${c}`} loading="lazy" />
+                </button>
+                {f === "0247" && (
+                  <Link to="/$view" params={{ view: "fourth-floor" }} className="log-window" aria-label="A lit window on the fourth floor" title="4F" />
+                )}
+              </div>
               <figcaption><b>{t}</b> {c}</figcaption>
             </figure>
           ) : (
@@ -222,7 +227,39 @@ function Privacy() {
 }
 
 function RooftopSession(){const [video,setVideo]=useState(false);const [sound,setSound]=useState(false);useEffect(()=>{const c=new AbortController();void fetch("/video/rooftop-session.mp4",{method:"HEAD",signal:c.signal}).then(r=>setVideo(r.ok&&!!r.headers.get("content-type")?.startsWith("video/"))).catch(()=>{});return()=>c.abort();},[]);return <><h2 className="holo-h1">Rooftop Session 004</h2>{video?<><video className="rooftop-video" src="/video/rooftop-session.mp4" loop muted={!sound} autoPlay playsInline controls/><Button variant="ghost" onClick={()=>setSound(!sound)}>{sound?"Mute session":"Play sound"}</Button></>:<div className="rooftop-still"><img src="/nightlog/2000.jpg" alt="The rooftop at lights-on"/></div>}<p className="holo-copy">Rooftop Session 004. One night, one band, one antenna. The building manager still doesn&apos;t know.</p><Link to="/$view" params={{view:"d2"}} className="holo-link">D2 · Get the poster →</Link></>;}
+const TRANSMISSIONS: [string, string][] = [
+  ["TX 001 · 03:15", "A calm voice reading slot codes. D4. A1. D4. Then: try it on the machine."],
+  ["TX 002 · 03:15", "Same voice, same time, a different night. The tape is dated before we went on air."],
+  ["TX 003 · 04:44", "Twenty minutes of 88.8, recorded off the air, a few seconds late. Nobody on the crew has a recorder."],
+  ["TX 004 · 05:59", "Rain, a door closing, and one line: same time tomorrow."],
+];
+
+function FourthFloor() {
+  useEffect(() => { play("static", { vol: 0.45, dur: 1.2 }); }, []);
+  return (
+    <>
+      <div className="log-status ff-status">SIGNAL UNSTABLE · 4F</div>
+      <h2 className="holo-h1 ff-glitch mt-1" data-text="You're not supposed to be on this floor.">You&apos;re not supposed to be on this floor.</h2>
+      <p className="holo-copy mt-3">The fourth floor was meant to be offices. The money ran out before anyone moved in. There&apos;s no power up here, but the lights work anyway.</p>
+      <p className="holo-copy mt-2.5">There&apos;s a desk. A reel-to-reel that shouldn&apos;t run. And a box of tapes that nobody on the crew recorded.</p>
+      <div className="holo-lcd mt-5 text-[20px]">RECOVERED FROM THE DESK</div>
+      <ul className="ff-tx">
+        {TRANSMISSIONS.map(([id, line]) => (
+          <li key={id}><b>{id}</b><span>{line}</span></li>
+        ))}
+      </ul>
+      <div className="ff-item">
+        <div className="holo-lcd text-[22px] text-[var(--ls-orange)]">E1 · FOURTH FLOOR TAPE</div>
+        <p className="holo-copy mt-1.5">Four copies in the box. Unlabelled, except for a frequency nobody broadcasts on. Not in the machine. Not yet.</p>
+        <Link to="/$view" params={{ view: "join" }} className="holo-link">Tell me when it surfaces →</Link>
+      </div>
+      <p className="holo-copy mt-5 ff-out">Leave the way you came. Don&apos;t tell the crew. <Link to="/$view" params={{ view: "night-log" }} className="holo-link">Back to the Night Log →</Link></p>
+    </>
+  );
+}
+
 export function PageView({ name }: { name: PageName }) {
+  if (name === "fourth-floor") return <FourthFloor />;
   if(name==="rooftop-session")return <RooftopSession/>;
   if (name === "station") return <Station />;
   if (name === "night-log") return <NightLog />;
