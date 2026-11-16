@@ -82,15 +82,41 @@ export function Line2({ active, onReveal, onMissed }: { active: boolean; onRevea
   );
 }
 
+/** Brownout prices end at this timestamp (ms), stored so a reload can't keep them forever. */
+export const BROWNOUT_KEY = "ls888_brownout_until";
+export function brownoutActive() {
+  try { return Number(localStorage.getItem(BROWNOUT_KEY) || 0) > Date.now(); } catch { return false; }
+}
+
 /**
  * Power cut: once per visit, at night, the power drops for 6 seconds. Thud,
  * dark, red emergency light, flicker back on, then brownout prices.
  */
-export function PowerCut({ active, onRestore }: { active: boolean; onRestore: () => void }) {
+export function PowerCut({ active, onRestore, onExpire }: { active: boolean; onRestore: () => void; onExpire: () => void }) {
   const [phase, setPhase] = useState<"off" | "dark" | "back">("off");
   const done = useRef(false);
   const cb = useRef(onRestore);
   cb.current = onRestore;
+  const expire = useRef(onExpire);
+  expire.current = onExpire;
+
+  // a brownout from before a reload: finish it on time, or end it now if it's over.
+  // (runs before the cart store loads, so clearing storage here wins)
+  useEffect(() => {
+    let until = 0;
+    try { until = Number(localStorage.getItem(BROWNOUT_KEY) || 0); } catch { /* blocked */ }
+    if (!until) return;
+    const left = until - Date.now();
+    if (left <= 0) {
+      try { localStorage.removeItem(BROWNOUT_KEY); localStorage.setItem("ls888_kicked", "false"); } catch { /* blocked */ }
+      return;
+    }
+    const t = setTimeout(() => {
+      try { localStorage.removeItem(BROWNOUT_KEY); } catch { /* blocked */ }
+      expire.current();
+    }, left);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (!active || done.current) return;
