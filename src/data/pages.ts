@@ -25,12 +25,13 @@ export const SHOWS: [string, string, string][] = [
 
 export const REQUEST_TOPICS = ["Song request", "Order question", "Restock alert", "Shout-out on air", "Something else"] as const;
 
-export type PageName = "station" | "night-log" | "request-line" | "shipping" | "privacy" | "join" | "night-shift-kit" | "rooftop-session";
-export const PAGE_SLUGS: PageName[] = ["station", "night-log", "request-line", "shipping", "privacy", "join", "night-shift-kit", "rooftop-session"];
+export type PageName = "station" | "night-log" | "request-line" | "shipping" | "privacy" | "join" | "night-shift-kit" | "rooftop-session" | "fourth-floor";
+export const PAGE_SLUGS: PageName[] = ["station", "night-log", "request-line", "shipping", "privacy", "join", "night-shift-kit", "rooftop-session", "fourth-floor"];
 export const PAGE_TITLES: Record<PageName, string> = {
   station: "Station",
   "night-shift-kit":"Night Shift Kit",
   "rooftop-session":"Rooftop Session 004",
+  "fourth-floor": "4F",
   "night-log": "Night Log",
   "request-line": "Request Line",
   shipping: "Shipping & Returns",
@@ -41,6 +42,7 @@ export const PAGE_DESCS: Record<PageName, string> = {
   station: "A pirate station with no licence, no faces and one vending machine. Tonight's schedule and the house rules.",
   "night-shift-kit":"Hoodie, cassette and pocket receiver for QAR 349.",
   "rooftop-session":"One night, one band, one antenna. Rooftop Session 004.",
+  "fourth-floor": "You're not supposed to be on this floor.",
   "night-log": "One night at Lost Signal 88.8, logged as it happens. And the caller on line 2 who knew the code.",
   "request-line": "Open 8PM to 6AM. Lines are always busy. Leave a message for the booth.",
   shipping: "Free shipping within Qatar in 3–5 days. Returns within 14 days if unused.",
@@ -50,6 +52,7 @@ export const PAGE_DESCS: Record<PageName, string> = {
 export const HEROES: Record<string, string> = {
   station: "/heroes/hero-station.jpg",
   "night-log": "/heroes/hero-night-log.jpg",
+  "fourth-floor": "/nightlog/2358.jpg",
   "request-line": "/heroes/hero-request-line.jpg",
   cart: "/heroes/hero-cart.jpg",
   saved: "/heroes/hero-favorites.jpg",
