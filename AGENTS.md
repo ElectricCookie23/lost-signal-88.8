@@ -39,4 +39,5 @@ use the editor.
 - Audio lives in `src/lib/audio.ts` (one AudioContext + master gain, buffers decoded on first click, mute in localStorage); the intro/exit/night-day sequence is phase state inside `_machine.tsx`, and hologram panels only open once phase is "on".
 - Secret code (D4·A1·D4) sets a localStorage flag passed to the 5-arg `place_order(..., p_secret)`, which appends a zero-price D1 bonus line without touching stock; `/orders/$no` opens the Orders panel highlighting that receipt.
 - Info pages (station, night-log, request-line, shipping, privacy, join) are hologram panels `{kind:"page"}` parsed from the single `/$view` segment; copy lives in `src/data/pages.ts`. On phones the hologram is a 70% bottom sheet (same component, CSS only).
+- Public Request Line and subscriber inserts use column-level grants for form fields only and validated RLS predicates; identifiers and submission timestamps must remain database-generated to prevent arbitrary records.
 <!-- AGENT-MEMORY:END -->

@@ -36,6 +36,13 @@
       "when": 1794777529538,
       "tag": "0004_requests_and_subscribers",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794802091471,
+      "tag": "0005_restrict_public_form_submissions",
+      "breakpoints": true
     }
   ]
 }
