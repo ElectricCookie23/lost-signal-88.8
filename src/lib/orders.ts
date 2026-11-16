@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { readLine, orderStep, TRACKING } from "@/lib/shopping";
 
 export interface OrderItem {
   code: string;
@@ -6,6 +7,8 @@ export interface OrderItem {
   price: number;
   qty: number;
   bonus?: string;
+  size?: string;
+  mystery?: string;
 }
 export interface Shipping {
   name: string;
@@ -13,6 +16,7 @@ export interface Shipping {
   address: string;
   city: string;
   country: string;
+  dedication?: {to:string;message:string};
 }
 export interface Order {
   id: string;
@@ -25,6 +29,8 @@ export interface Order {
   shipping: Partial<Shipping>;
   status: string;
   created_at: string;
+  dedication?: {to?:string;message?:string};
+  promotions?: {label:string}[];
 }
 
 /** Round money to 2 decimals. */
@@ -38,6 +44,7 @@ function norm(raw: unknown): Order {
   const o = raw as Order & { subtotal_qar?: number; discount_qar?: number; total_qar?: number };
   return {
     ...o,
+    status: TRACKING[orderStep(o.created_at)-1] ?? o.status,
     items: (o.items ?? []).map((i) => ({ ...i, price: money(i.price) })),
     subtotal: money(o.subtotal_qar ?? o.subtotal),
     discount: money(o.discount_qar ?? o.discount),
@@ -80,13 +87,14 @@ export async function placeOrder(
   signedIn: boolean,
   secret = false,
 ): Promise<PlaceResult> {
-  const items = Object.entries(cart).map(([code, qty]) => ({ code, qty }));
+  const items = Object.entries(cart).map(([key, qty]) => {const l=readLine(key);return {code:l.code,size:l.size||null,mystery:l.mystery||null,qty};});
   const { data, error } = await supabase.rpc("place_order", {
     p_items: items,
     p_email: ship.email,
     p_shipping: { name: ship.name, address: ship.address, city: ship.city, country: ship.country },
     p_kicked: kicked,
     p_secret: secret,
+    p_dedication: ship.dedication ?? {},
   });
   if (error) return { ok: false, error: error.message };
   const r = data as unknown as { ok: boolean; order?: Order; short?: { code: string; stock: number }[] };
@@ -99,7 +107,7 @@ export async function placeOrder(
 
 export async function fetchOrders(signedIn: boolean): Promise<Order[]> {
   if (signedIn) {
-    const { data } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase.from("orders").select("*").eq("is_ghost",false).order("created_at", { ascending: false });
     const mine = ((data ?? []) as unknown[]).map(norm);
     // plus receipts printed on this device under another email
     const ids = guestOrderIds();

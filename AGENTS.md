@@ -37,7 +37,11 @@ use the editor.
 - Admin role is granted on signup by matching `public.admin_emails`.
 - Orders are created only by the `place_order` RPC (prices/stock checked server-side, one transaction); guests read their orders via `guest_orders(ids)` from localStorage ids and `claim_orders` attaches them on sign-in.
 - Audio lives in `src/lib/audio.ts` (one AudioContext + master gain, buffers decoded on first click, mute in localStorage); the intro/exit/night-day sequence is phase state inside `_machine.tsx`, and hologram panels only open once phase is "on".
-- Secret code (D4·A1·D4) sets a localStorage flag passed to the 5-arg `place_order(..., p_secret)`, which appends a zero-price D1 bonus line without touching stock; `/orders/$no` opens the Orders panel highlighting that receipt.
+- Secret code (D4·A1·D4) sets a localStorage flag passed to `place_order(..., p_secret, p_dedication)`, which appends a zero-price D1 bonus line without touching stock; `/orders/$no` opens the Orders panel highlighting that receipt.
 - Info pages (station, night-log, request-line, shipping, privacy, join) are hologram panels `{kind:"page"}` parsed from the single `/$view` segment; copy lives in `src/data/pages.ts`. On phones the hologram is a 70% bottom sheet (same component, CSS only).
 - Public Request Line and subscriber inserts use column-level grants for form fields only and validated RLS predicates; identifiers and submission timestamps must remain database-generated to prevent arbitrary records.
+- Station simulation runs in the existing SQL timer with locked stock updates; shared listener counts are read through a narrow public RPC, and product presence rooms exclude the current viewer so activity remains consistent without exposing ghost receipts.
+- Size-aware cart keys use code, size and optional mystery claim; shared component availability is calculated centrally so bundles cannot overbook individual stock.
+- Order tracking is derived from creation timestamps on reads rather than recurring jobs; this preserves transition timing without idle polling costs.
+- Weather and glass effects run after hydration, with pointer-transparent visuals and reduced-motion alternatives so shopping remains accessible.
 <!-- AGENT-MEMORY:END -->

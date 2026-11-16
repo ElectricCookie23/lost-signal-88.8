@@ -1,0 +1,7 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { lineKey, SIZES, TRACKING, orderStep } from "@/lib/shopping";
+import type { MachineStore } from "@/hooks/use-machine-store";
+export function SizePicker({code,value,onChange,store}:{code:string;value:string;onChange:(s:string)=>void;store:MachineStore}) {return <div className="size-picker" aria-label="Size">{(SIZES[code]??[]).map(s=><Button key={s} variant="ghost" disabled={store.available(lineKey(code,s))===0} aria-pressed={value===s} onClick={()=>onChange(s)}>{s}</Button>)}</div>;}
+export function KitView({store,onAdd}:{store:MachineStore;onAdd:(key:string,qty:number)=>void}){const [size,setSize]=useState(""); return <><h2 className="holo-h1">Night Shift Kit</h2><div className="kit-photos">{["B1","A1","C1"].map(c=><img key={c} src={`/products/${c}.jpg`} alt={c}/>)}</div><p className="holo-copy">Station Hoodie · Dead Air Vol. 1 · Pocket Receiver</p><div className="holo-price">QAR 349.00</div><p className="holo-lcd">You save QAR 65</p><SizePicker code="B1" value={size} onChange={setSize} store={store}/><Button className="btn-primary" disabled={!size||store.available(lineKey("KIT",size))===0} onClick={()=>onAdd(lineKey("KIT",size),1)}>ADD THE KIT</Button></>;}
+export function Tracking({created}:{created:string}){const step=orderStep(created);return <ol className="order-progress">{TRACKING.map((t,i)=><li key={t} className={step>i?"is-done":""}>{t}</li>)}</ol>;}

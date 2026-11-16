@@ -32,7 +32,7 @@ export function ReceiptPaper({ order, torn }: { order: Order; torn: boolean }) {
         {order.items.map((i, n) => (
           <div key={n} className="row">
             <span>
-              {i.code} {i.bonus ? `${i.bonus}` : i.name.toUpperCase()}
+              {i.code} {i.bonus ? `${i.bonus}` : i.name.toUpperCase()}{i.size ? ` · ${i.size}` : ""}
               {i.qty > 1 ? ` x${i.qty}` : ""}
             </span>
             <span>{(i.price * i.qty).toFixed(2)}</span>
@@ -40,7 +40,7 @@ export function ReceiptPaper({ order, torn }: { order: Order; torn: boolean }) {
         ))}
         {order.discount > 0 && (
           <div className="row">
-            <span>KICKIT -10%</span>
+            <span>{order.promotions?.map(p=>p.label).join(" / ") || "KICKIT -10%"}</span>
             <span>-{order.discount.toFixed(2)}</span>
           </div>
         )}
@@ -50,6 +50,7 @@ export function ReceiptPaper({ order, torn }: { order: Order; torn: boolean }) {
           <span>{order.total.toFixed(2)}</span>
         </div>
         <div>PAYMENT: HELD (NOT CHARGED)</div>
+        {order.dedication?.to && <><hr/><div>THIS ONE GOES OUT TO {order.dedication.to.toUpperCase()}</div><div>“{order.dedication.message}”</div></>}
         <hr />
         <div>
           KEEP THIS RECEIPT.

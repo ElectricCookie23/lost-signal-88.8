@@ -36,6 +36,7 @@ interface MachineStageProps {
   uiOn?: boolean;
   /** Day mode: desaturate. */
   offAir?: boolean;
+  idlePan?: boolean;
 }
 
 /**
@@ -43,7 +44,7 @@ interface MachineStageProps {
  * coordinates. The whole stage is scaled/translated by the "camera" so
  * overlays always line up with the photo at any screen size.
  */
-export function MachineStage({ mode, row, children, rattle = 0, intro = false, duration = 0.9, bright = 1, uiOn = true, offAir = false }: MachineStageProps) {
+export function MachineStage({ mode, row, children, rattle = 0, intro = false, duration = 0.9, bright = 1, uiOn = true, offAir = false, idlePan=false }: MachineStageProps) {
   const { w, h } = useViewport();
   const mobile = w <= 760;
   let cam: Camera = computeCamera(mode, row, w, h, mobile);
@@ -69,8 +70,8 @@ export function MachineStage({ mode, row, children, rattle = 0, intro = false, d
           className="absolute left-0 top-0"
           style={{ width: STAGE_W, height: STAGE_H, transformOrigin: "0 0" }}
           initial={false}
-          animate={{ x: cam.tx, y: cam.ty, scale: cam.s }}
-          transition={{ duration: intro ? 0 : duration, ease: EASE }}
+          animate={idlePan ? {x:[cam.tx,cam.tx-80,cam.tx-130,cam.tx],y:[cam.ty,cam.ty+50,cam.ty-80,cam.ty],scale:[cam.s,cam.s*1.12,cam.s*1.08,cam.s]} : { x: cam.tx, y: cam.ty, scale: cam.s }}
+          transition={idlePan?{duration:40,repeat:Infinity,ease:"linear"}:{ duration: intro ? 0 : duration, ease: EASE }}
         >
           <div
             key={rattle}
@@ -80,7 +81,7 @@ export function MachineStage({ mode, row, children, rattle = 0, intro = false, d
           <img
             src="/machine/machine-empty.jpg"
             alt="The Lost Signal 88.8 vending machine in a dark corridor"
-            className="absolute inset-0 h-full w-full select-none"
+            className="machine-photo absolute inset-0 h-full w-full select-none"
             draggable={false}
           />
           {children}

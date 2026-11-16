@@ -1,0 +1,5 @@
+import { useEffect,useState } from "react";
+export function useWeather(){const [weather,setWeather]=useState<"rain"|"heat"|"clear">("clear");useEffect(()=>{
+ if(new URLSearchParams(location.search).get("weather")==="rain"){setWeather("rain");return;}
+ const controller=new AbortController();const fetchWeather=async()=>{try{const r=await fetch("https://api.open-meteo.com/v1/forecast?latitude=25.2854&longitude=51.531&current=temperature_2m,precipitation&timezone=Asia%2FQatar",{signal:controller.signal});if(!r.ok)return;const d=await r.json() as {current:{temperature_2m:number;precipitation:number}};setWeather(d.current.precipitation>0?"rain":d.current.temperature_2m>35?"heat":"clear");}catch{/* retain clear scene */}};
+ void fetchWeather();const t=setInterval(()=>void fetchWeather(),1800_000);return()=>{clearInterval(t);controller.abort();};},[]);return weather;}

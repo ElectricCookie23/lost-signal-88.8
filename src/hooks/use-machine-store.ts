@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PRODUCT_BY_CODE } from "@/data/products";
 import { supabase } from "@/integrations/supabase/client";
 import type { CameraMode } from "@/lib/machine-layout";
+import { readLine, VARIANTS, remainingStock } from "@/lib/shopping";
 
-const CART_KEY = "ls888_cart";
+const CART_KEY = "ls888_size_cart";
 const SAVED_KEY = "ls888_saved";
 const KICKED_KEY = "ls888_kicked";
 
@@ -77,23 +78,13 @@ export function useMachineStore(userId: string | null = null) {
     setStockTick((t) => t + 1);
     if (animate) setTicks((t) => Object.fromEntries([...Object.entries(t), ...changed.map((c) => [c, (t[c] ?? 0) + 1])]));
     // clamp carts that now exceed real stock
-    setCart((c) => {
-      let next = c;
-      for (const code of changed) {
-        const max = PRODUCT_BY_CODE[code]?.stock ?? 0;
-        const have = c[code] ?? 0;
-        if (have > max) {
-          if (next === c) next = { ...c };
-          if (max === 0) delete next[code];
-          else next[code] = max;
-          setBeaten((b) => ({ ...b, [code]: max }));
-        }
-      }
-      return next;
-    });
+    // Variant updates arrive separately; checkout authoritatively resolves conflicts.
   }, []);
 
   useEffect(() => {
+    const apply = (rows:{code:string;size:string;stock:number}[]) => { rows.forEach(r=>{VARIANTS[`${r.code}|${r.size}`]=r.stock;}); setStockTick(t=>t+1); };
+    void supabase.from("product_variants").select("code,size,stock").then(({data})=>{if(data)apply(data);});
+    const variants=supabase.channel(`variants-${crypto.randomUUID()}`).on("postgres_changes",{event:"UPDATE",schema:"public",table:"product_variants"},p=>apply([p.new as {code:string;size:string;stock:number}])).subscribe();
     supabase
       .from("products")
       .select("code, stock")
@@ -107,6 +98,7 @@ export function useMachineStore(userId: string | null = null) {
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
+      supabase.removeChannel(variants);
     };
   }, [onStock]);
 
@@ -129,24 +121,24 @@ export function useMachineStore(userId: string | null = null) {
     let cancelled = false;
     (async () => {
       const [{ data: dbCart }, { data: dbSaved }] = await Promise.all([
-        supabase.from("cart_items").select("code, qty"),
+        supabase.from("shopping_cart").select("line_key, qty"),
         supabase.from("saved_items").select("code"),
       ]);
       if (cancelled) return;
       const localCart = load<Record<string, number>>(CART_KEY, {});
       const localSaved = load<string[]>(SAVED_KEY, []);
       const merged: Record<string, number> = {};
-      for (const r of dbCart ?? []) merged[r.code] = r.qty;
+      for (const r of dbCart ?? []) merged[r.line_key] = r.qty;
       for (const [c, q] of Object.entries(localCart)) merged[c] = Math.max(merged[c] ?? 0, q);
       for (const c of Object.keys(merged)) {
-        const max = PRODUCT_BY_CODE[c]?.stock ?? 0;
-        if (merged[c]! > max) merged[c] = max;
+        const max = readLine(c).code === "KIT" ? 99 : PRODUCT_BY_CODE[readLine(c).code]?.stock ?? 0;
+        if ((merged[c] ?? 0) > max) merged[c] = max;
         if (!merged[c]) delete merged[c];
       }
       const mergedSaved = Array.from(new Set([...(dbSaved ?? []).map((r) => r.code), ...localSaved]));
       // push merged guest items up, then forget the guest copy
-      const upCart = Object.entries(merged).map(([code, qty]) => ({ user_id: userId, code, qty }));
-      if (upCart.length) await supabase.from("cart_items").upsert(upCart);
+      const upCart = Object.entries(merged).map(([line_key, qty]) => ({ user_id: userId, line_key, qty }));
+      if (upCart.length) await supabase.from("shopping_cart").upsert(upCart);
       const upSaved = mergedSaved.map((code) => ({ user_id: userId, code }));
       if (upSaved.length) await supabase.from("saved_items").upsert(upSaved);
       try {
@@ -173,10 +165,10 @@ export function useMachineStore(userId: string | null = null) {
     const gone = Object.keys(prev).filter((c) => !cart[c]);
     const up = Object.entries(cart)
       .filter(([c, q]) => prev[c] !== q)
-      .map(([code, qty]) => ({ user_id: userId, code, qty }));
+      .map(([line_key, qty]) => ({ user_id: userId, line_key, qty }));
     s.cart = cart;
-    if (gone.length) void supabase.from("cart_items").delete().eq("user_id", userId).in("code", gone);
-    if (up.length) void supabase.from("cart_items").upsert(up);
+    if (gone.length) void supabase.from("shopping_cart").delete().eq("user_id", userId).in("line_key", gone);
+    if (up.length) void supabase.from("shopping_cart").upsert(up);
   }, [cart, userId]);
 
   useEffect(() => {
@@ -201,7 +193,9 @@ export function useMachineStore(userId: string | null = null) {
   const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
 
   const available = useCallback(
-    (code: string) => Math.max(0, (PRODUCT_BY_CODE[code]?.stock ?? 0) - (cart[code] ?? 0)),
+    (key: string): number => {
+      return remainingStock(key,cart);
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [cart, stockTick],
   );
@@ -264,7 +258,7 @@ export function useMachineStore(userId: string | null = null) {
 
   const setQty = useCallback((code: string, qty: number) => {
     setCart((c) => {
-      const max = PRODUCT_BY_CODE[code]?.stock ?? 0;
+      const others={...c};delete others[code];const max=remainingStock(code,others);
       const n = Math.max(0, Math.min(max, qty));
       const next = { ...c };
       if (n === 0) delete next[code];

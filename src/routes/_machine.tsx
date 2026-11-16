@@ -25,6 +25,14 @@ import { Beam } from "@/components/holo/Beam";
 import { TopBar } from "@/components/TopBar";
 import { Gate, SignalLost } from "@/components/intro/Gate";
 import { PocketRadio } from "@/components/intro/PocketRadio";
+import { LiveStrip } from "@/components/intro/LiveStrip";
+import { useClock } from "@/hooks/use-clock";
+import { readLine,lineKey,SIZES } from "@/lib/shopping";
+import { Button } from "@/components/ui/button";
+import { useWeather } from "@/hooks/use-weather";
+import { GlassWeather } from "@/components/machine/GlassWeather";
+import { useListenerCard } from "@/hooks/use-listener-card";
+import { fetchOrders } from "@/lib/orders";
 import { StaticOverlay } from "@/components/intro/StaticOverlay";
 import { OutOfOrderNote, SignDark } from "@/components/intro/MachineExtras";
 import { useOnAir } from "@/hooks/use-on-air";
@@ -62,6 +70,16 @@ function Machine() {
   const auth = useAuth();
   const store = useMachineStore(auth.user?.id ?? null);
   const station = useStation();
+  const clock=useClock();
+  const weather=useWeather();
+  const listenerCard=useListenerCard(!!auth.user,auth.user?.created_at);
+  const [lastProduct,setLastProduct]=useState<string|null>(null);
+  const [rememberGlow,setRememberGlow]=useState(false);
+  const [idle,setIdle]=useState(0);
+  const [roulette,setRoulette]=useState<string|null>(null);
+  const [mysteryBusy,setMysteryBusy]=useState(false);
+  const [mysteryDone,setMysteryDone]=useState(false);
+  useEffect(()=>{setMysteryDone(sessionStorage.getItem("ls888_mystery_done")==="1");},[]);
   const navigate = useNavigate();
   const { view, no } = useParams({ strict: false }) as { view?: string; no?: string };
   const urlPanel: Panel | null = no ? { kind: "orders", highlight: no.toUpperCase() } : parseView(view);
@@ -115,6 +133,18 @@ function Machine() {
   useEffect(() => { humOn(humming && onAir); }, [humming, onAir]);
 
   const panel = phase === "on" ? (local ?? urlPanel) : null;
+  useEffect(()=>{void fetchOrders(!!auth.user).then(o=>setLastProduct(o[0]?.items.find(i=>!i.bonus)?.code??null));},[auth.user]);
+  useEffect(()=>{
+    if(phase!=="on")return;
+    if(lastProduct){setRememberGlow(true);store.flashLcd(`WELCOME BACK\n${lastProduct} AGAIN?`,3000);const t=setTimeout(()=>setRememberGlow(false),3000);return()=>clearTimeout(t);}
+    return undefined;
+  },[phase,lastProduct,store.flashLcd]);
+  useEffect(()=>{
+    if(phase!=="on")return;
+    let t1:ReturnType<typeof setTimeout>,t2:ReturnType<typeof setTimeout>;
+    const reset=()=>{clearTimeout(t1);clearTimeout(t2);setIdle(0);t1=setTimeout(()=>{setIdle(1);store.flashLcd("STILL THERE?",5000);if(!reduced.current){setGlitch(true);setTimeout(()=>setGlitch(false),150);}},45000);t2=setTimeout(()=>{if(!reduced.current)setIdle(2);},120000);};
+    reset();const names=["pointermove","pointerdown","keydown"] as const;names.forEach(n=>window.addEventListener(n,reset));return()=>{clearTimeout(t1);clearTimeout(t2);names.forEach(n=>window.removeEventListener(n,reset));};
+  },[phase,store.flashLcd]);
 
   const { setSelected } = store;
   useEffect(() => {
@@ -184,9 +214,7 @@ function Machine() {
     if (!r.ok) {
       if ("error" in r) return "The machine jammed. Try again.";
       for (const s of r.short) {
-        const p = PRODUCT_BY_CODE[s.code];
-        if (p) p.stock = s.stock;
-        store.setQty(s.code, s.stock);
+        for(const key of Object.keys(store.cart))if(readLine(key).code===s.code)store.setQty(key,Math.min(store.cart[key]??0,s.stock));
       }
       setCartNote(
         r.short.map((s) => `Someone beat you to it: ${s.code} only has ${s.stock} left.`).join(" "),
@@ -214,8 +242,10 @@ function Machine() {
   const buyAgain = (o: Order) => {
     const missing: string[] = [];
     for (const i of o.items) {
-      const k = Math.min(i.qty, store.available(i.code));
-      if (k > 0) store.setQty(i.code, (store.cart[i.code] ?? 0) + k);
+      if(i.bonus) continue;
+      const key=lineKey(i.code,i.size??"");
+      const k = Math.min(i.qty, store.available(key));
+      if (k > 0) store.setQty(key, (store.cart[key] ?? 0) + k);
       if (k < i.qty) missing.push(i.code);
     }
     setLocal({ kind: "cart" });
@@ -352,9 +382,10 @@ function Machine() {
   }, [printing]);
 
   const addWithCoin = (code: string | null, qty = 1) => {
+    if(code && SIZES[readLine(code).code] && !readLine(code).size){openProduct(readLine(code).code);return;}
     if (!code) { store.addToTray({ x: 0, y: 0 }); return; }
     if (store.available(code) > 0) play("coin", { vol: 0.9 });
-    store.addToTray(slotPos(code), code, qty);
+    store.addToTray(slotPos(readLine(code).code === "KIT" ? "B1" : readLine(code).code), code, qty);
   };
 
   const openSaved = () => {
@@ -428,15 +459,24 @@ function Machine() {
 
   const handleAdd = () => addWithCoin(store.selected);
 
-  const lcdText = !onAir && store.lcdText.startsWith("CART ") ? "OFF AIR\nTILL 8PM" : store.lcdText;
+  const lcdText = clock.alternate && clock.dead ? "DEAD HOURS\n15% OFF" : clock.alternate && !air.real ? `RESTOCK IN\n${clock.countdown}` : store.lcdText;
+  const mysteryBuy=async()=>{
+    if(mysteryBusy||mysteryDone)return;setMysteryBusy(true);play("coin",{vol:.9});
+    try{let visit=sessionStorage.getItem("ls888_mystery_visit");if(!visit){visit=crypto.randomUUID();sessionStorage.setItem("ls888_mystery_visit",visit);}
+      const {data,error}=await supabase.rpc("mystery_drop",{p_visit:visit});if(error)throw error;
+      const m=data as {id:string;code:string;size:string|null;used:boolean};if(m.used){setMysteryDone(true);return;}
+      for(let i=0;i<24;i++)later(()=>setRoulette(`${"ABCD"[Math.floor((i%16)/4)]}${i%4+1}`),Math.round(3000*(i/24)**1.6));
+      later(()=>{setRoulette(m.code);addWithCoin(lineKey(m.code,m.size??"",m.id));sessionStorage.setItem("ls888_mystery_done","1");setMysteryDone(true);setMysteryBusy(false);later(()=>setRoulette(null),700);},3000);
+    }catch{store.flashLcd("NO SIGNAL\nTRY AGAIN");setMysteryBusy(false);}
+  };
 
   const cartItems = Object.entries(store.cart).flatMap(([code, qty]) =>
-    Array.from({ length: qty }, () => code),
+    Array.from({ length: qty }, () => readLine(code).code === "KIT" ? "B1" : readLine(code).code),
   );
 
   return (
     <div className={`min-h-screen overflow-hidden bg-background text-foreground${navOpen ? " nav-dim" : ""}${panel ? " has-panel" : ""}`}>
-      <MachineStage mode={mode} row={row} rattle={rattle} intro={intro} duration={camDur} bright={bright * (onAir || phase === "on" || phase === "boot" ? 1 : 0.4)} uiOn={uiOn} offAir={!onAir}>
+      <MachineStage mode={mode} row={row} rattle={rattle} intro={intro} duration={idle===2?0:camDur} idlePan={idle===2&&!panel} bright={bright * (onAir || phase === "on" || phase === "boot" ? 1 : 0.4)} uiOn={uiOn} offAir={!onAir}>
         <SignDark visible={!onAir || !lit || glitch} />
         <OutOfOrderNote fallen={noteFallen && onAir} />
         <GlassMenu
@@ -445,7 +485,7 @@ function Machine() {
           onPage={(v) => navigate({ to: "/$view", params: { view: v } })}
         />
         <SlotGrid
-          selected={store.selected}
+          selected={roulette??(rememberGlow?lastProduct:null)??store.selected}
           available={store.available}
           onSelect={pick}
           onOpen={openProduct}
@@ -457,7 +497,10 @@ function Machine() {
           bootKey={bootKey}
           tipKey={`${mode}:${row}:${panel?.kind ?? ""}:${receipt ? 1 : 0}`}
         />
-        <Lcd text={lcdText} />
+        <GlassWeather weather={weather}/>
+        <Lcd text={lcdText} onClick={lastProduct?()=>openProduct(lastProduct):undefined}/>
+        <Button variant="ghost" className="kit-strip" onClick={()=>navigate({to:"/$view",params:{view:"night-shift-kit"}})}>NIGHT SHIFT KIT · 3 FOR QAR 349</Button>
+        <Button variant="ghost" className="coin-slot" aria-label="Insert coin · Mystery drop" title="INSERT COIN · MYSTERY DROP" disabled={mysteryBusy||mysteryDone} onClick={()=>void mysteryBuy()}/>
         <Keypad selected={store.selected} available={store.available} onSelect={keypadPress} />
         <MachineButtons onAdd={handleAdd} onSave={store.toggleSave} onClear={close} />
         <PickupTray items={cartItems} onOpen={openCart} />
@@ -488,6 +531,7 @@ function Machine() {
         onRattle={() => { setRattle((r) => r + 1); play("rattle", { vol: 0.7 }); }}
         onPrint={printOrder}
         onBuyAgain={buyAgain}
+        listenerSince={auth.user?.created_at}
       />
       {receipt && (
         <ReceiptActions
@@ -498,7 +542,7 @@ function Machine() {
         />
       )}
       <MobileDock
-        lcdText={store.lcdText}
+        lcdText={lcdText}
         selected={store.selected}
         isSaved={!!store.selected && store.saved.includes(store.selected)}
         available={store.available}
@@ -517,6 +561,8 @@ function Machine() {
         onHome={goHome}
         hidden={!barOn}
         onAir={onAir}
+        showLights={!air.real && !onAir}
+        onLights={toggleAir}
       />
       <Footer hidden={!barOn} onOrders={() => openPanel("orders")} onJoin={() => { store.clearSelection(); setLocal({ kind: "page", name: "join" }); }} />
       <Navigator
@@ -536,11 +582,13 @@ function Machine() {
         savedCount={store.saved.length}
         available={store.available}
         userName={auth.name}
+        listenerCard={listenerCard}
         isAdmin={auth.isAdmin}
         muted={muted}
         onAir={onAir}
       />
       <PocketRadio hidden={!barOn} listeners={station.listeners} events={station.events} />
+      <LiveStrip hidden={!barOn} listeners={station.listeners} events={station.events} toast={station.toast} onProduct={openProduct} notice={[weather==="rain"?"RAINING IN DOHA · RARE NIGHT":"",clock.dead?"DEAD HOURS · 15% OFF":!onAir?"OFF AIR · BACK AT 8PM":""].filter(Boolean).join(" ✦ ")} />
       <Gate
         hidden={phase !== "gate"}
         welcome={visits > 0 ? `Welcome back, night owl.${store.cartCount ? ` Your cart still has ${store.cartCount} item${store.cartCount > 1 ? "s" : ""}.` : ""}` : null}

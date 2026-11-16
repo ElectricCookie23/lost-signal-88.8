@@ -35,7 +35,7 @@ export function Flashlight({ active }: { active: boolean }) {
   return (
     <>
       <div ref={ref} className="flashlight" aria-hidden />
-      <div className="flash-hint" style={{ opacity: hint ? 1 : 0 }}>Lights are off. Use your flashlight.</div>
+      <div className="flash-hint" style={{ opacity: hint ? 1 : 0 }}>Lights are off. Use your flashlight, or turn the lights on ↗</div>
     </>
   );
 }
