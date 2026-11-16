@@ -1677,3 +1677,43 @@
 
 /* sticky bar: solid so the "Added to cart" line never sits over text */
 .holo-sticky { background: rgb(5, 24, 20); box-shadow: 0 -22px 18px -8px rgba(5, 24, 20, 0.95); }
+
+
+/* Line 2 call */
+.line2 { position: fixed; right: 20px; bottom: 64px; z-index: 70; display: flex; align-items: center; gap: 10px; padding: 10px 14px; font: 19px/1 VT323, monospace; letter-spacing: 0.08em; color: var(--ls-fog); background: rgba(5, 14, 8, 0.94); border: 1px solid var(--ls-orange); border-radius: 8px; box-shadow: 0 0 18px rgba(232, 105, 60, 0.45); cursor: default; }
+.line2 b { margin-left: 4px; padding: 4px 8px; font-weight: 400; color: #050E08; background: var(--ls-orange); border-radius: 4px; }
+.line2.is-ringing { cursor: pointer; animation: line2-shake 0.5s ease-in-out infinite; }
+.line2.is-ringing:hover b { background: var(--ls-fog); }
+.line2-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ls-orange); box-shadow: 0 0 10px var(--ls-orange); animation: log-blink 0.5s steps(2) infinite; }
+.line2.is-talking .line2-dot, .line2.is-ended .line2-dot { background: var(--ls-glow); box-shadow: 0 0 10px var(--ls-glow); }
+.line2.is-ended { border-color: var(--ls-oxide); box-shadow: none; }
+@keyframes line2-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-2px) rotate(-1deg); } 40% { transform: translateX(2px) rotate(1deg); } 60% { transform: translateX(-1px); } }
+@media (max-width: 759px) { .line2 { right: 12px; bottom: 132px; font-size: 17px; } }
+
+/* Power cut */
+.powercut { position: fixed; inset: 0; z-index: 9999; pointer-events: none; background: #000; animation: pc-drop 0.18s steps(2); }
+.powercut-emergency { position: absolute; inset: 0; background: radial-gradient(circle at 86% 10%, rgba(255, 40, 25, 0.42), transparent 34%); animation: pc-red 1.4s ease-in-out infinite; }
+.powercut.is-back { animation: pc-back 1.6s steps(7) forwards; }
+@keyframes pc-drop { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+@keyframes pc-red { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes pc-back { 0% { opacity: 1; } 20% { opacity: 0.15; } 35% { opacity: 0.95; } 55% { opacity: 0.1; } 70% { opacity: 0.7; } 100% { opacity: 0; } }
+
+/* Pocket radio: tape drop target + tip */
+.pocket.is-drop .pocket-body { box-shadow: 0 0 0 2px var(--ls-orange), 0 0 22px rgba(232, 105, 60, 0.55); }
+.pocket-tracks-tip { font-size: 14px; color: var(--ls-static); letter-spacing: 0.04em; }
+
+/* Night Log: the lit window on the fourth floor */
+.log-photo { position: relative; }
+.log-window { position: absolute; left: 14%; top: 34%; width: 2.6%; height: 3.6%; min-width: 9px; min-height: 11px; background: #ffb35c; box-shadow: 0 0 8px 2px rgba(255, 170, 80, 0.8); opacity: 0.85; animation: log-flicker 4s steps(4) infinite; cursor: pointer; }
+.log-window:hover, .log-window:focus-visible { opacity: 1; box-shadow: 0 0 14px 5px rgba(255, 170, 80, 0.95); }
+
+/* Fourth floor */
+.ff-status { color: var(--ls-orange); animation: log-flicker 1.8s steps(3) infinite; }
+.ff-glitch { position: relative; }
+.ff-glitch::after { content: attr(data-text); position: absolute; inset: 0; color: var(--ls-orange); opacity: 0.35; transform: translate(2px, -1px); clip-path: inset(0 0 60% 0); animation: ff-shift 3s steps(2) infinite; pointer-events: none; }
+@keyframes ff-shift { 0%, 100% { transform: translate(2px, -1px); clip-path: inset(0 0 60% 0); } 50% { transform: translate(-2px, 1px); clip-path: inset(55% 0 0 0); } }
+.ff-tx { list-style: none; margin: 10px 0 0; padding: 0; border-top: 1px dashed var(--ls-oxide); }
+.ff-tx li { display: grid; grid-template-columns: 116px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px dashed rgba(78, 141, 120, 0.35); font-size: 13.5px; color: var(--ls-static); }
+.ff-tx b { font: 19px/1.1 VT323, monospace; font-weight: 400; color: var(--ls-glow); }
+.ff-item { margin-top: 18px; padding: 14px; border: 1px solid rgba(232, 105, 60, 0.55); background: rgba(232, 105, 60, 0.06); }
+@media (prefers-reduced-motion: reduce) { .line2.is-ringing, .line2-dot, .powercut, .powercut-emergency, .powercut.is-back, .log-window, .ff-status, .ff-glitch::after { animation: none; } .powercut.is-back { opacity: 0; } }
