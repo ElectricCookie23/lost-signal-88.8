@@ -246,6 +246,21 @@ export function skipTrack(dir: 1 | -1 = 1) {
   radioTimer = setTimeout(() => void playMusic(), 300);
 }
 
+/** Jump straight to a track from the list; starts the radio if it's off. */
+export function playTrack(i: number) {
+  trackIdx = ((i % TRACKS.length) + TRACKS.length) % TRACKS.length;
+  listeners.forEach((f) => f());
+  if (!radioOn) { void radio(true); return; }
+  if (radioTimer) clearTimeout(radioTimer);
+  playToken++;
+  const old = music;
+  music = null;
+  fadeOut(old, 0.25);
+  play("static", { vol: 0.3, off: Math.random() * 0.4, dur: 0.3 });
+  radioTimer = setTimeout(() => void playMusic(), 300);
+}
+export const currentTrackIndex = () => trackIdx;
+
 export async function radio(on: boolean) {
   if (on === radioOn) return;
   radioOn = on;
