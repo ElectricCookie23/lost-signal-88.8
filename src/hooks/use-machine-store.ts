@@ -38,34 +38,42 @@ function applyStock(rows: { code: string; stock: number }[]) {
 }
 
 export function useMachineStore(userId: string | null = null) {
-  const [cart, setCart] = useState<Record<string, number>>(() => load(CART_KEY, {}));
-  const [saved, setSaved] = useState<string[]>(() => load(SAVED_KEY, []));
+  // start empty so the server and the first client render match; real values load after mount
+  const [cart, setCart] = useState<Record<string, number>>({});
+  const [saved, setSaved] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<CameraMode>("wide");
   const [row, setRow] = useState<number | null>(null);
   const [lcdOverride, setLcdOverride] = useState<string | null>(null);
   const [faller, setFaller] = useState<Faller | null>(null);
-  const [kicked, setKicked] = useState<boolean>(() => load(KICKED_KEY, false));
+  const [kicked, setKicked] = useState<boolean>(false);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setCart(load(CART_KEY, {}));
+    setSaved(load(SAVED_KEY, []));
+    setKicked(load(KICKED_KEY, false));
+    setReady(true);
+  }, []);
   const lcdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fallerId = useRef(0);
 
   useEffect(() => {
-    if (userId) return;
+    if (userId || !ready) return;
     try {
       localStorage.setItem(CART_KEY, JSON.stringify(cart));
     } catch {
       /* storage full or blocked */
     }
-  }, [cart, userId]);
+  }, [cart, userId, ready]);
 
   useEffect(() => {
-    if (userId) return;
+    if (userId || !ready) return;
     try {
       localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
     } catch {
       /* storage full or blocked */
     }
-  }, [saved, userId]);
+  }, [saved, userId, ready]);
 
   // ---- live stock -------------------------------------------------------
   const [stockTick, setStockTick] = useState(0);
@@ -183,12 +191,13 @@ export function useMachineStore(userId: string | null = null) {
   }, [saved, userId]);
 
   useEffect(() => {
+    if (!ready) return;
     try {
       localStorage.setItem(KICKED_KEY, JSON.stringify(kicked));
     } catch {
       /* storage blocked */
     }
-  }, [kicked]);
+  }, [kicked, ready]);
 
   const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
 
