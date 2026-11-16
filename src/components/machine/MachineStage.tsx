@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   computeCamera,
+  targetArea,
   STAGE_H,
   STAGE_W,
   type Camera,
@@ -10,10 +11,23 @@ import {
 
 const EASE = [0.65, 0, 0.25, 1] as const;
 
+/**
+ * Browser zoom (Cmd +/-). Browsers don't expose it, so estimate it two ways and
+ * only trust it when they agree: window width ratio, and pixel ratio vs. a 1x/2x screen.
+ * Anything unclear (side panels, odd screens) falls back to 1 = today's behaviour.
+ */
+function browserZoom() {
+  const byWidth = window.outerWidth > 0 && window.innerWidth > 0 ? window.outerWidth / window.innerWidth : 1;
+  const dpr = window.devicePixelRatio || 1;
+  const byDpr = [1, 2].map((base) => dpr / base).reduce((a, b) => (Math.abs(b - byWidth) < Math.abs(a - byWidth) ? b : a));
+  if (Math.abs(byWidth - byDpr) > 0.08) return 1;
+  return Math.min(2.5, Math.max(0.5, byDpr));
+}
+
 function useViewport() {
-  const [size, setSize] = useState({ w: 1280, h: 800 });
+  const [size, setSize] = useState({ w: 1280, h: 800, z: 1 });
   useEffect(() => {
-    const update = () => setSize({ w: window.innerWidth, h: window.innerHeight });
+    const update = () => setSize({ w: window.innerWidth, h: window.innerHeight, z: browserZoom() });
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -45,9 +59,17 @@ interface MachineStageProps {
  * overlays always line up with the photo at any screen size.
  */
 export function MachineStage({ mode, row, children, rattle = 0, intro = false, duration = 0.9, bright = 1, uiOn = true, offAir = false, idlePan=false }: MachineStageProps) {
-  const { w, h } = useViewport();
+  const { w, h, z } = useViewport();
   const mobile = w <= 760;
   let cam: Camera = computeCamera(mode, row, w, h, mobile);
+  // Cmd + / Cmd - grows or shrinks the machine like the rest of the page,
+  // around the middle of the machine's part of the screen (left side when a panel is open)
+  if (!mobile && Math.abs(z - 1) > 0.02) {
+    const a = targetArea(mode, w, h, mobile);
+    const cx = a.x + a.w / 2;
+    const cy = a.y + a.h / 2;
+    cam = { s: cam.s * z, tx: cx - (cx - cam.tx) * z, ty: cy - (cy - cam.ty) * z };
+  }
   if (intro) {
     const s = Math.max(w / 900, h / 600);
     cam = { s, tx: w / 2 - 1340 * s, ty: h / 2 - 640 * s };
