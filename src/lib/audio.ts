@@ -96,17 +96,24 @@ export const click = (vol = 0.35) => play("static", { vol, off: Math.random() * 
 let hum: Voice | null = null;
 let humPan: StereoPannerNode | null = null;
 let humSpace: GainNode | null = null;
+/** Neon buzz drops to this level while the radio plays, so the music is clear. */
+const HUM_DUCK = 0.2;
+let humDuck: GainNode | null = null;
+function applyDuck() {
+  if (ctx && humDuck) humDuck.gain.setTargetAtTime(radioOn ? HUM_DUCK : 1, ctx.currentTime, 0.4);
+}
 export function humOn(on: boolean) {
   if (on && !hum && ctx && master && buf.neon) {
     const src = ctx.createBufferSource();
     src.buffer = buf.neon; src.loop = true;
     const gain = ctx.createGain(); gain.gain.value = 0.25;
     humSpace = ctx.createGain(); humSpace.gain.value = 1;
+    humDuck = ctx.createGain(); humDuck.gain.value = radioOn ? HUM_DUCK : 1;
     humPan = ctx.createStereoPanner();
-    src.connect(gain).connect(humSpace).connect(humPan).connect(master);
+    src.connect(gain).connect(humSpace).connect(humDuck).connect(humPan).connect(master);
     src.start();
     hum = { src, gain };
-  } else if (!on && hum) { fadeOut(hum, 0.6); hum = null; }
+  } else if (!on && hum) { fadeOut(hum, 0.6); hum = null; humDuck = null; }
 }
 /** Spatial neon: pan −0.6…0.6 by cursor x (0…1); gain 1…1.5 by closeness to the sign (0…1). Smoothed ~0.3s. */
 export function humSpatial(x: number, near: number) {
@@ -170,33 +177,88 @@ export function lockIn() {
 }
 
 /* ---------- radio ---------- */
+/** Station playlist. Missing files are skipped, so tracks can be added later. */
+export const TRACKS: { title: string; file: string }[] = [
+  { title: "Dead Air Vol. 1, Side B", file: "/audio/music_lofi_bed.mp3" },
+  { title: "Stairwell B", file: "/audio/tracks/stairwell-b.mp3" },
+  { title: "Basement Hours", file: "/audio/tracks/basement-hours.mp3" },
+  { title: "Rooftop Session 004", file: "/audio/tracks/rooftop-session-004.mp3" },
+  { title: "Night Crew", file: "/audio/tracks/night-crew.mp3" },
+  { title: "6AM Sign Off", file: "/audio/tracks/6am-sign-off.mp3" },
+];
 let radioOn = false;
 let music: Voice | null = null;
 let radioTimer: ReturnType<typeof setTimeout> | null = null;
+let trackIdx = 0;
+let playToken = 0;
+const trackBuf = new Map<string, AudioBuffer | null>();
 export const isRadioOn = () => radioOn;
+export const currentTrack = () => TRACKS[trackIdx] ?? TRACKS[0];
 
-function playMusic() {
+async function loadTrack(i: number): Promise<AudioBuffer | null> {
+  const t = TRACKS[i];
+  if (!t || !ctx) return null;
+  if (trackBuf.has(t.file)) return trackBuf.get(t.file) ?? null;
+  let b: AudioBuffer | null = null;
+  try {
+    const r = await fetch(t.file);
+    if (r.ok) b = await ctx.decodeAudioData(await r.arrayBuffer());
+  } catch { b = null; }
+  trackBuf.set(t.file, b);
+  return b;
+}
+
+/** Play the current track; skip forward past any file that is missing. Auto-advances at the end. */
+async function playMusic() {
   if (!radioOn) return;
-  music = play("music", { vol: 0.55 });
-  if (!music) return;
-  const me = music;
-  me.src.onended = () => {
-    if (!radioOn || music !== me) return;
-    play("static", { vol: 0.35, off: Math.random() * 0.4, dur: 0.35 }); // burst at the loop point
-    radioTimer = setTimeout(playMusic, 300);
-  };
+  const token = ++playToken;
+  for (let n = 0; n < TRACKS.length; n++) {
+    const b = await loadTrack(trackIdx);
+    if (token !== playToken || !radioOn) return;
+    if (b) {
+      const me = start(b, { vol: 0.55 });
+      music = me;
+      listeners.forEach((f) => f());
+      if (!me) return;
+      me.src.onended = () => {
+        if (!radioOn || music !== me) return;
+        play("static", { vol: 0.35, off: Math.random() * 0.4, dur: 0.35 }); // burst between tracks
+        trackIdx = (trackIdx + 1) % TRACKS.length;
+        radioTimer = setTimeout(() => void playMusic(), 300);
+      };
+      return;
+    }
+    trackIdx = (trackIdx + 1) % TRACKS.length;
+  }
+}
+
+/** Next (1) or previous (-1) track, with a short static burst like changing a tape. */
+export function skipTrack(dir: 1 | -1 = 1) {
+  trackIdx = (trackIdx + dir + TRACKS.length) % TRACKS.length;
+  listeners.forEach((f) => f());
+  if (!radioOn) return;
+  if (radioTimer) clearTimeout(radioTimer);
+  playToken++;
+  const old = music;
+  music = null;
+  fadeOut(old, 0.25);
+  play("static", { vol: 0.3, off: Math.random() * 0.4, dur: 0.3 });
+  radioTimer = setTimeout(() => void playMusic(), 300);
 }
 
 export async function radio(on: boolean) {
   if (on === radioOn) return;
   radioOn = on;
   listeners.forEach((f) => f());
+  applyDuck();
   if (on) {
     await unlock();
     if (!radioOn) return;
+    applyDuck();
     play("static", { vol: 0.4, dur: 1 });
-    radioTimer = setTimeout(playMusic, 1000);
+    radioTimer = setTimeout(() => void playMusic(), 1000);
   } else {
+    playToken++;
     if (radioTimer) clearTimeout(radioTimer);
     fadeOut(music, 0.8);
     music = null;
