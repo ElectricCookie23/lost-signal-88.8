@@ -1688,7 +1688,7 @@
 .line2.is-talking .line2-dot, .line2.is-ended .line2-dot { background: var(--ls-glow); box-shadow: 0 0 10px var(--ls-glow); }
 .line2.is-ended { border-color: var(--ls-oxide); box-shadow: none; }
 @keyframes line2-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-2px) rotate(-1deg); } 40% { transform: translateX(2px) rotate(1deg); } 60% { transform: translateX(-1px); } }
-@media (max-width: 759px) { .line2 { right: 12px; bottom: 132px; font-size: 17px; } }
+@media (max-width: 759px) { .line2 { left: 12px; right: 12px; top: 92px; bottom: auto; justify-content: center; font-size: 17px; } }
 
 /* Power cut */
 .powercut { position: fixed; inset: 0; z-index: 9999; pointer-events: none; background: #000; animation: pc-drop 0.18s steps(2); }
