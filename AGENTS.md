@@ -44,4 +44,5 @@ use the editor.
 - Size-aware cart keys use code, size and optional mystery claim; shared component availability is calculated centrally so bundles cannot overbook individual stock.
 - Order tracking is derived from creation timestamps on reads rather than recurring jobs; this preserves transition timing without idle polling costs.
 - Weather and glass effects run after hydration, with pointer-transparent visuals and reduced-motion alternatives so shopping remains accessible.
+- Mystery-drop camera reset uses the shared close handler only after the item fall completes; timer-only resets can leave camera state behind.
 <!-- AGENT-MEMORY:END -->

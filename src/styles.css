@@ -1620,9 +1620,23 @@
 .glass-fog i { position:absolute;width:100px;height:35px;border-radius:50%;pointer-events:none;background:color-mix(in srgb,var(--ls-fog) 18%,transparent);filter:blur(12px);animation:fog-fade 4s ease-out forwards; }
 @keyframes fog-fade { to { opacity:0; } }
 @media (prefers-reduced-motion:reduce){.rooftop-still img,.glass-rain,.heat-shimmer{animation:none;}}
-/* kit strip: full glass width, glowing, slow pulse */
-.kit-strip { left:860px;top:926px;width:780px;height:30px;font:24px VT323,monospace;letter-spacing:1px;color:var(--ls-glow);text-shadow:0 0 6px var(--ls-glow),0 0 14px var(--ls-glow);background:transparent;animation:kit-pulse 2.8s ease-in-out infinite; }
-.kit-strip.kit-mobile { display:none;top:1110px;left:860px;width:780px;height:40px;font-size:30px; }
+/* Lit kit sign, positioned between the glass and pickup tray. */
+.kit-strip { left:995px;top:930px;width:520px;height:56px;padding:2px 4px;display:flex;flex-direction:column;gap:0;line-height:1;letter-spacing:0;border:2px solid var(--ls-orange);border-radius:2px;color:var(--ls-orange);background:var(--ls-black);box-shadow:0 0 12px var(--ls-orange);white-space:nowrap;z-index:5; }
+.kit-strip strong { font:26px/1 "Archivo Black",sans-serif; }
+.kit-strip span { font:20px/1 VT323,monospace;color:var(--ls-fog); }
+.kit-strip:hover { background:var(--ls-panel);color:var(--ls-orange-hot);box-shadow:0 0 22px var(--ls-orange); }
+.kit-strip.kit-mobile { display:none;top:1110px;left:860px;width:780px;height:40px;font:30px/1 VT323,monospace;border:0;background:transparent;box-shadow:none; }
 @keyframes kit-pulse { 0%,100%{opacity:.75} 50%{opacity:1;filter:brightness(1.25)} }
 @media (max-width:759px){ .kit-strip.kit-mobile{display:flex} .sale-toast{bottom:104px} }
 @media (prefers-reduced-motion: reduce){ .kit-strip{animation:none} }
+.oo-note { left:555px;top:620px;width:300px;height:240px;padding:16px 8px;font:48px/1 VT323,monospace;white-space:normal;gap:5px;transform:rotate(-5deg);pointer-events:auto;transition:left .8s,top .8s,width .8s,height .8s,font-size .8s,transform .8s,opacity .9s; }
+.oo-note small { font:25px/1.1 VT323,monospace;margin-top:10px;opacity:1; }
+.oo-note::before,.oo-note::after { width:80px;height:24px;top:-10px; }
+.oo-note::before { left:-12px; }.oo-note::after { right:-12px; }
+.oo-note.is-centered { left:990px;top:380px;width:500px;height:380px;font-size:76px;transform:rotate(-2deg) translateY(-12px); }
+.oo-note.is-centered small { font-size:40px; }
+.oo-note:hover { background:#e9e2cf;color:#1d1d1d;transform:rotate(-3deg) translateY(-8px); }
+@media (hover:hover) { .oo-note:not(.is-centered):not(.is-fallen):hover { animation:note-wobble .65s ease-in-out infinite alternate; } }
+@keyframes note-wobble { from { transform:rotate(-6deg) translateY(-8px); } to { transform:rotate(-3deg) translateY(-12px); } }
+@media (max-width:760px) { .oo-note:not(.is-centered) { left:840px;top:940px;width:220px;height:140px;font-size:32px;gap:0; }.oo-note:not(.is-centered) small { font-size:18px;margin-top:4px; } }
+@media (prefers-reduced-motion:reduce) { .oo-note { transition:opacity .2s;animation:none!important; } }

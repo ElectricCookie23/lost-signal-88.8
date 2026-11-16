@@ -71,6 +71,13 @@
       "when": 1794805353820,
       "tag": "0009_ghost_half_stock_rule",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794807078598,
+      "tag": "0010_guard_ghost_stock_with_warnings",
+      "breakpoints": true
     }
   ]
 }

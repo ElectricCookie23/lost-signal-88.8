@@ -16,3 +16,4 @@
 - [x] Prompt B (after A): sizes, kit, dedications, sharing, discounts, mystery drop, restock countdown and tracking
 - [x] Prompt C (after A and B): atmosphere and depth from the uploaded brief
 - [ ] Signed-in listener card and account cart final check — requesting user has no matching app account/session.
+- [x] Final fixes: mystery camera completion, lit kit sign, ghost stock guard and B3 reset, animated day note.

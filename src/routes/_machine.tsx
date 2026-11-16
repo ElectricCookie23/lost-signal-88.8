@@ -79,6 +79,7 @@ function Machine() {
   const [roulette,setRoulette]=useState<string|null>(null);
   const [mysteryBusy,setMysteryBusy]=useState(false);
   const [mysteryDone,setMysteryDone]=useState(false);
+  const mysteryDropPending = useRef(false);
   useEffect(()=>{setMysteryDone(sessionStorage.getItem("ls888_mystery_done")==="1");},[]);
   const navigate = useNavigate();
   const { view, no } = useParams({ strict: false }) as { view?: string; no?: string };
@@ -187,6 +188,11 @@ function Machine() {
 
   const close = useCallback(() => {
     setLocal(null);
+    setIdle(0);
+    setIntro(false);
+    setReceipt(null);
+    setRoulette(null);
+    setCamDur(0.9);
     store.clearSelection();
     if (view || no) navigate({ to: "/" });
   }, [navigate, view, no, store]);
@@ -464,9 +470,9 @@ function Machine() {
     if(mysteryBusy||mysteryDone)return;setMysteryBusy(true);play("coin",{vol:.9});
     try{let visit=sessionStorage.getItem("ls888_mystery_visit");if(!visit){visit=crypto.randomUUID();sessionStorage.setItem("ls888_mystery_visit",visit);}
       const {data,error}=await supabase.rpc("mystery_drop",{p_visit:visit});if(error)throw error;
-      const m=data as {id:string;code:string;size:string|null;used:boolean};if(m.used){setMysteryDone(true);return;}
+      const m=data as {id:string;code:string;size:string|null;used:boolean};if(m.used){setMysteryDone(true);setMysteryBusy(false);return;}
       for(let i=0;i<24;i++)later(()=>setRoulette(`${"ABCD"[Math.floor((i%16)/4)]}${i%4+1}`),Math.round(3000*(i/24)**1.6));
-      later(()=>{setRoulette(m.code);addWithCoin(lineKey(m.code,m.size??"",m.id));sessionStorage.setItem("ls888_mystery_done","1");setMysteryDone(true);setMysteryBusy(false);later(()=>{setRoulette(null);close();},700);},3000);
+      later(()=>{setRoulette(null);const key=lineKey(m.code,m.size??"",m.id);if(store.available(key)<=0){setMysteryBusy(false);close();store.flashLcd("SOLD OUT\nTRY AGAIN");return;}mysteryDropPending.current=true;addWithCoin(key);sessionStorage.setItem("ls888_mystery_done","1");setMysteryDone(true);},3000);
     }catch{store.flashLcd("NO SIGNAL\nTRY AGAIN");setMysteryBusy(false);}
   };
 
@@ -478,7 +484,7 @@ function Machine() {
     <div className={`min-h-screen overflow-hidden bg-background text-foreground${navOpen ? " nav-dim" : ""}${panel ? " has-panel" : ""}`}>
       <MachineStage mode={mode} row={row} rattle={rattle} intro={intro} duration={idle===2?0:camDur} idlePan={idle===2&&!panel} bright={bright * (onAir || phase === "on" || phase === "boot" ? 1 : 0.4)} uiOn={uiOn} offAir={!onAir}>
         <SignDark visible={!onAir || !lit || glitch} />
-        <OutOfOrderNote fallen={noteFallen && onAir} />
+        <OutOfOrderNote fallen={noteFallen && onAir} active={phase === "on" && !onAir} />
         <GlassMenu
           activeRow={row}
           onRow={(r) => navigate({ to: "/$view", params: { view: ROW_SLUGS[r] ?? "tapes" } })}
@@ -499,7 +505,7 @@ function Machine() {
         />
         <GlassWeather weather={weather}/>
         <Lcd text={lcdText} onClick={lastProduct?()=>openProduct(lastProduct):undefined}/>
-        <Button variant="ghost" className="kit-strip" onClick={()=>navigate({to:"/$view",params:{view:"night-shift-kit"}})}>NIGHT SHIFT KIT · 3 FOR QAR 349 · SAVE 65</Button>
+        <Button variant="ghost" className="kit-strip" onClick={()=>navigate({to:"/$view",params:{view:"night-shift-kit"}})}><strong>NIGHT SHIFT KIT</strong><span>HOODIE + TAPE + RADIO · QAR 349 · SAVE 65</span></Button>
         <Button variant="ghost" className="kit-strip kit-mobile" onClick={()=>navigate({to:"/$view",params:{view:"night-shift-kit"}})}>NIGHT SHIFT KIT · 3 FOR QAR 349 · SAVE 65</Button>
         <Button variant="ghost" className="coin-slot" aria-label="Insert coin · Mystery drop" title="INSERT COIN · MYSTERY DROP" disabled={mysteryBusy||mysteryDone} onClick={()=>void mysteryBuy()}/>
         <Keypad selected={store.selected} available={store.available} onSelect={keypadPress} />
@@ -510,7 +516,7 @@ function Machine() {
           {station.text}
         </div>
         {receipt && <ReceiptPaper order={receipt.order} torn={receipt.torn} />}
-        {store.faller && <Faller faller={store.faller} onDone={() => { play("drop", { vol: 0.9 }); store.completeFall(); }} />}
+        {store.faller && <Faller faller={store.faller} onDone={() => { play("drop", { vol: 0.9 }); store.completeFall(); if(mysteryDropPending.current){mysteryDropPending.current=false;setMysteryBusy(false);close();} }} />}
       </MachineStage>
       <Atmosphere haze={hazeOn && onAir} />
       <Flashlight active={!onAir && (phase === "on" || phase === "boot")} />
