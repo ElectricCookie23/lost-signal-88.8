@@ -180,11 +180,11 @@ export function lockIn() {
 /** Station playlist. Missing files are skipped, so tracks can be added later. */
 export const TRACKS: { title: string; file: string }[] = [
   { title: "Dead Air Vol. 1, Side B", file: "/audio/music_lofi_bed.mp3" },
-  { title: "Stairwell B", file: "/audio/tracks/stairwell-b.mp3" },
-  { title: "Basement Hours", file: "/audio/tracks/basement-hours.mp3" },
-  { title: "Rooftop Session 004", file: "/audio/tracks/rooftop-session-004.mp3" },
-  { title: "Night Crew", file: "/audio/tracks/night-crew.mp3" },
-  { title: "6AM Sign Off", file: "/audio/tracks/6am-sign-off.mp3" },
+  { title: "Concrete Stairwell", file: "/audio/tracks/concrete-stairwell.mp3" },
+  { title: "Basement Frequency", file: "/audio/tracks/basement-frequency.mp3" },
+  { title: "Stairwell After 3AM", file: "/audio/tracks/stairwell-after-3am.mp3" },
+  { title: "Abandoned Broadcast", file: "/audio/tracks/abandoned-broadcast.mp3" },
+  { title: "Basement Frequency, Side B", file: "/audio/tracks/basement-frequency-side-b.mp3" },
 ];
 let radioOn = false;
 let music: Voice | null = null;
