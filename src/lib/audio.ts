@@ -263,6 +263,8 @@ export const currentTrack = () => TRACKS[trackIdx] ?? TRACKS[0];
 async function loadTrack(i: number): Promise<AudioBuffer | null> {
   const t = TRACKS[i];
   if (!t || !ctx) return null;
+  // the lofi bed is already decoded for the intro: reuse it instead of decoding it twice
+  if (t.file === FILES.music && buf.music) return buf.music;
   if (trackBuf.has(t.file)) return trackBuf.get(t.file) ?? null;
   let b: AudioBuffer | null = null;
   try {
@@ -281,6 +283,9 @@ async function playMusic() {
     const b = await loadTrack(trackIdx);
     if (token !== playToken || !radioOn) return;
     if (b) {
+      // a decoded 3-minute song is ~60MB of memory: keep only the one playing
+      const keep = TRACKS[trackIdx]?.file;
+      for (const [file, cached] of trackBuf) if (cached && file !== keep) trackBuf.delete(file);
       const me = start(b, { vol: 0.55 });
       music = me;
       listeners.forEach((f) => f());
