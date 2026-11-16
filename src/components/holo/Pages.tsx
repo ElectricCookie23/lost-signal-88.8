@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { NIGHT_LOG, REQUEST_TOPICS, type PageName } from "@/data/pages";
+import { NIGHT_LOG, REQUEST_TOPICS, SHOWS, type PageName } from "@/data/pages";
 import { play } from "@/lib/audio";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
@@ -16,14 +16,50 @@ export function HoloHero({ src, alt }: { src: string; alt: string }) {
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
+/** Minutes past midnight in Qatar (UTC+3, no DST); null until mounted so SSR matches. */
+function useQatarMinute() {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => { const d = new Date(); setNow(((d.getUTCHours() + 3) % 24) * 60 + d.getUTCMinutes()); };
+    tick();
+    const t = setInterval(tick, 30000);
+    return () => clearInterval(t);
+  }, []);
+  return now;
+}
+/** Minutes since 20:00, so the 20:00 to 06:00 night counts up 0 to 599. */
+const sinceEight = (min: number) => (min - 1200 + 1440) % 1440;
+const hhmm = (s: string) => Number(s.slice(0, 2)) * 60 + Number(s.slice(2));
+const label = (s: string) => `${s.slice(0, 2)}:${s.slice(2)}`;
+
 function Station() {
+  const now = useQatarMinute();
+  const onAir = now != null && sinceEight(now) < 600;
+  const cur = onAir ? SHOWS.reduce((c, sh, i) => (sinceEight(hhmm(sh[0])) <= sinceEight(now ?? 0) ? i : c), 0) : -1;
   return (
     <>
-      <h2 className="holo-h1 text-[26px]">Nobody&apos;s supposed to know where we are.</h2>
-      <p className="holo-copy mt-3">88.8 started on a rooftop with a borrowed transmitter, a car battery and one rule: we only broadcast after dark.</p>
-      <p className="holo-copy mt-2.5">The building has a corridor nobody uses after 8pm. In it was a vending machine that stopped selling soda years ago. We cleaned it out, rewired the lights and filled it with things the station makes.</p>
-      <p className="holo-copy mt-2.5">Stock is small and it doesn&apos;t come back often. Every purchase keeps the transmitter running for another night. You either catch the signal or you don&apos;t.</p>
-      <p className="holo-lcd mt-3.5 text-[24px] text-[var(--ls-orange)]">SEE YOU AT 8. BRING COINS.</p>
+      <div className={`log-status${onAir ? " is-live" : ""}`}>{onAir ? `ON AIR · ${(SHOWS[cur]?.[1] ?? "").toUpperCase()}` : "OFF AIR · BACK AT 8"}</div>
+      <h2 className="holo-h1 text-[26px] mt-1">You weren&apos;t supposed to find this.</h2>
+      <p className="holo-copy mt-3">88.8 is a pirate station. No licence, no office, no faces. Just a borrowed transmitter on the roof of a tower nobody finished, and a crew of three who only work after dark.</p>
+      <p className="holo-copy mt-2.5"><b>The Host</b> talks. <b>The Engineer</b> keeps the transmitter from catching fire. <b>The Runner</b> does everything else: batteries, tea, deliveries, and the vending machine in the corridor.</p>
+      <p className="holo-copy mt-2.5">The machine stopped selling soda years ago. We rewired it and filled it with things the station makes. Every sale keeps us on air for one more night. When something sells out, it&apos;s gone until we make more.</p>
+      <div className="station-rules">
+        <b>HOUSE RULES</b><br />
+        1. We only broadcast 8pm to 6am.<br />
+        2. Don&apos;t tell anyone which building.<br />
+        3. Pay the machine. It remembers.<br />
+        4. If line 2 rings, don&apos;t pick up.
+      </div>
+      <div className="holo-lcd mt-5 text-[20px]">TONIGHT ON 88.8</div>
+      <div className="sched">
+        {SHOWS.map(([t, name, line], i) => (
+          <div key={t} className={`sched-row${i === cur ? " is-now" : ""}`}>
+            <time>{label(t)}</time>
+            <div><strong>{name}</strong><p>{line}</p></div>
+          </div>
+        ))}
+      </div>
+      <p className="holo-copy mt-4">Something strange happened on the request line last night. <Link to="/$view" params={{ view: "night-log" }} className="holo-link">Read the Night Log →</Link></p>
       <Link to="/$view" params={{view:"rooftop-session"}} className="holo-link">Watch Rooftop Session 004 →</Link>
     </>
   );
@@ -31,6 +67,22 @@ function Station() {
 
 function NightLog() {
   const [big, setBig] = useState<number | null>(null);
+  const [archive, setArchive] = useState(false);
+  const now = useQatarMinute();
+  const night = now != null && sinceEight(now) < 600;
+  const live = night && !archive;
+  const open = (f: string) => !live || sinceEight(hhmm(f)) <= sinceEight(now ?? 0);
+  const count = NIGHT_LOG.filter(([f]) => open(f)).length;
+  const prev = useRef(count);
+  const [fresh, setFresh] = useState<string | null>(null);
+  // a new entry unlocking while the page is open: static burst and a flash
+  useEffect(() => {
+    if (live && count > prev.current) {
+      play("static", { vol: 0.35, dur: 0.4 });
+      setFresh(NIGHT_LOG[count - 1]?.[0] ?? null);
+    }
+    prev.current = count;
+  }, [count, live]);
   const cur = big == null ? null : NIGHT_LOG[big];
   // Escape closes only the photo, not the whole panel
   useEffect(() => {
@@ -41,17 +93,25 @@ function NightLog() {
   }, [big]);
   return (
     <>
-      <div className="holo-lcd text-[20px]">20:00 — 06:00</div>
-      <h2 className="holo-h1">Night Log</h2>
+      <div className={`log-status${live ? " is-live" : ""}`}>{live ? `LIVE · ${count} OF ${NIGHT_LOG.length} LOGGED` : "ARCHIVED · LAST NIGHT"}</div>
+      <h2 className="holo-h1 mt-1">Night Log</h2>
+      <p className="holo-copy mt-1.5">{live ? "Tonight, written as it happens. The rest isn't logged yet. Come back later." : "One night, ten photos, and a caller on line 2 who knew more than we did."}</p>
+      {night && <button type="button" className="log-toggle" onClick={() => setArchive((a) => !a)}>{archive ? "Back to tonight's log →" : "Read last night's full log →"}</button>}
       <div className="night-log">
-        {NIGHT_LOG.map(([f, t, c], i) => (
-          <figure key={f}>
-            <button type="button" onClick={() => setBig(i)} aria-label={`Open photo: ${t}`}>
-              <img src={`/nightlog/${f}.jpg`} alt={`${t} ${c}`} loading="lazy" />
-            </button>
-            <figcaption><b>{t}</b> {c}</figcaption>
-          </figure>
-        ))}
+        {NIGHT_LOG.map(([f, t, c], i) =>
+          open(f) ? (
+            <figure key={f} className={fresh === f ? "is-new" : undefined}>
+              <button type="button" onClick={() => setBig(i)} aria-label={`Open photo: ${t}`}>
+                <img src={`/nightlog/${f}.jpg`} alt={`${t} ${c}`} loading="lazy" />
+              </button>
+              <figcaption><b>{t}</b> {c}</figcaption>
+            </figure>
+          ) : (
+            <figure key={f} aria-label={`Not logged yet: ${label(f)}`}>
+              <div className="log-locked"><b>{label(f)}</b><span>NOT LOGGED YET</span></div>
+            </figure>
+          ),
+        )}
       </div>
       {cur && (
         <div className="lightbox" role="dialog" aria-modal="true" aria-label={cur[1]} onClick={() => setBig(null)}>
