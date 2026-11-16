@@ -41,7 +41,7 @@ function Station() {
       <div className={`log-status${onAir ? " is-live" : ""}`}>{onAir ? `ON AIR · ${(SHOWS[cur]?.[1] ?? "").toUpperCase()}` : "OFF AIR · BACK AT 8"}</div>
       <h2 className="holo-h1 text-[26px] mt-1">You weren&apos;t supposed to find this.</h2>
       <p className="holo-copy mt-3">88.8 is a pirate station. No licence, no office, no faces. Just a borrowed transmitter on the roof of a tower nobody finished, and a crew of three who only work after dark.</p>
-      <p className="holo-copy mt-2.5"><b>The Host</b> talks. <b>The Engineer</b> keeps the transmitter from catching fire. <b>The Runner</b> does everything else: batteries, tea, deliveries, and the vending machine in the corridor.</p>
+      <p className="holo-copy mt-2.5"><b>The Host</b> talks, on air as DJ Static. <b>The Engineer</b> keeps the transmitter from catching fire. <b>The Runner</b> does everything else: batteries, tea, deliveries, and the vending machine in the corridor.</p>
       <p className="holo-copy mt-2.5">The machine stopped selling soda years ago. We rewired it and filled it with things the station makes. Every sale keeps us on air for one more night. When something sells out, it&apos;s gone until we make more.</p>
       <div className="station-rules">
         <b>HOUSE RULES</b><br />
