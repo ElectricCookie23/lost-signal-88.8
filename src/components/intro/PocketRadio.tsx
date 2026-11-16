@@ -14,7 +14,7 @@ export function PocketRadio({
 }: {
   hidden: boolean;
   listeners: number;
-  events: { id: number; text: string }[];
+  events: { id: string | number; text: string }[];
 }) {
   const [on, setOn] = useState(false);
   const [open, setOpen] = useState(false);

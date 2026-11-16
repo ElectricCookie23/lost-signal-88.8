@@ -1549,3 +1549,44 @@
   .topbar-logo { min-height: 44px; display: inline-flex; flex-direction: column; justify-content: center; }
   .mobile-dock button { min-height: 44px; }
 }
+
+/* Live station updates */
+:root { --live-surface: color-mix(in srgb, var(--ls-black) 80%, transparent); --receipt-surface: #e9e2cf; --receipt-ink: #1d1d1d; }
+.machine-photo { mask-image: linear-gradient(to right, transparent, black 120px, black calc(100% - 120px), transparent), linear-gradient(to bottom, transparent, black 120px, black calc(100% - 120px), transparent); mask-composite: intersect; }
+.lights-switch { white-space: nowrap; color: var(--ls-orange); font-family: VT323, monospace; animation: lights-pulse 4s ease-in-out infinite; }
+@keyframes lights-pulse { 50% { opacity: .6; } }
+.topbar-logo, .icon-btn, .btn-primary, .btn-secondary { white-space: nowrap; }
+.holo-sticky .holo-add { min-width: 190px; flex: 0 0 190px; }
+.holo-sticky .holo-save { min-width: 0; padding-inline: 8px; flex-shrink: 1; }
+.holo-sticky .holo-acts { gap: 6px; }
+.oo-note { left: 790px; top: 878px; width: 105px; height: 84px; font-size: 18px; transform: rotate(-6deg); }
+.oo-note small { font-size: 8px; margin-top: 3px; }
+.oo-note::before, .oo-note::after { width: 26px; height: 10px; top: -4px; }
+.oo-note::before { left: -5px; } .oo-note::after { right: -5px; }
+.live-strip { position: fixed; top: 48px; left: 0; right: 0; height: 24px; z-index: 30; overflow: hidden; background: var(--live-surface); color: var(--ls-glow); font: 13px/24px VT323, monospace; }
+.live-strip-track { display: flex; width: max-content; animation: strip-scroll 65s linear infinite, strip-flash 1s ease-out; }
+.live-strip-track span { white-space: nowrap; padding-right: 30px; }
+@keyframes strip-scroll { to { transform: translateX(-50%); } }
+@keyframes strip-flash { from { color: var(--ls-orange); } to { color: var(--ls-glow); } }
+.sale-toast { position: fixed; z-index: 32; bottom: 52px; right: 16px; height: auto; max-width: 320px; padding: 10px; border-radius: 2px; background: var(--receipt-surface); color: var(--receipt-ink); white-space: normal; animation: pocket-up .35s ease-out; box-shadow: 0 3px 10px var(--live-surface); }
+.sale-toast img { width: 46px; height: 54px; object-fit: cover; }
+.sale-toast span { display: flex; flex-direction: column; text-align: left; font: 16px VT323, monospace; }
+.sale-toast b { font-size: 18px; }
+.holo { top: 88px; }
+@media (max-width: 760px) {
+  .topbar { padding-inline: 8px; gap: 2px; }
+  .topbar-left, .topbar-right { gap: 2px; }
+  .topbar-logo { flex-direction: row; font-size: 10px; gap: 3px; }
+  .topbar-logo b { font-size: 11px; }
+  .topbar-right .icon-btn { padding-inline: 4px; font-size: 11px; min-width: 36px; }
+  .lights-switch { padding-inline: 6px; width: 32px; min-width: 32px; }
+  .lights-switch span { display: none; }
+  .pocket { left: auto; right: 10px; bottom: 102px; }
+  .sale-toast { right: 8px; bottom: 160px; max-width: 260px; }
+  .holo { top: auto; }
+  .flash-hint { width: calc(100% - 24px); font-size: 17px; text-align: center; }
+  .holo-sticky { padding-inline: 18px; }
+  .holo-sticky .holo-qty { gap: 1px; }
+  .holo-sticky .holo-save { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .live-strip-track, .lights-switch, .sale-toast { animation: none; } }

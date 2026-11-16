@@ -4,7 +4,7 @@ import { fmtDate, receiptUrl } from "@/lib/orders";
 /** 80mm thermal receipt, following receiptPDF() in the reference prototype. */
 export async function receiptPDF(o: Order) {
   const { jsPDF } = await import("jspdf");
-  const h = 186 + o.items.length * 10;
+  const h = 186 + o.items.length * 10 + (o.dedication?.to ? 45 : 0);
   const d = new jsPDF({ unit: "mm", format: [80, h] });
   let y = 12;
   const L = 6, R = 74, Q = 52;
@@ -33,21 +33,22 @@ export async function receiptPDF(o: Order) {
   d.setFont("courier", "normal");
   for (const i of o.items) {
     // courier 9pt ≈ 1.9mm/char; keep names clear of the QTY column
-    let name = `${i.code} ${i.name}`;
+    let name = `${i.code} ${i.name}${i.size ? ` · ${i.size}` : ""}`;
     const maxW = Q - 8 - L;
     while (d.getTextWidth(name) > maxW && name.length > 4) name = name.slice(0, -1);
     if (name !== `${i.code} ${i.name}`) name = name.slice(0, -1) + "…";
     tx(name, L); tx(i.qty, Q, "right"); tx((i.price * i.qty).toFixed(2), R, "right"); y += 4;
-    d.setFontSize(7.5); tx(i.bonus ? `   ${i.bonus}` : `   @ ${i.price.toFixed(2)} each`, L); d.setFontSize(9); y += 5.5;
+    d.setFontSize(7.5); tx(i.bonus ? `   ${i.bonus}` : `   ${i.size ?? ""} @ ${i.price.toFixed(2)} each`, L); d.setFontSize(9); y += 5.5;
   }
   rule();
   tx("Subtotal", L); tx(o.subtotal.toFixed(2), R, "right"); y += 4.5;
-  if (o.discount) { tx("KICKIT discount (10%)", L); tx("-" + o.discount.toFixed(2), R, "right"); y += 4.5; }
+  if (o.discount) { tx("Promotions (max 25%)", L); tx("-" + o.discount.toFixed(2), R, "right"); y += 4.5; }
   tx("Shipping", L); tx("FREE", R, "right"); y += 4.5;
   tx("VAT", L); tx("0.00", R, "right"); y += 6;
   d.setFont("courier", "bold"); d.setFontSize(12); tx("TOTAL QAR", L); tx(o.total.toFixed(2), R, "right"); y += 6;
   d.setFont("courier", "normal"); d.setFontSize(7.8); tx("Payment: held, not charged (demo store)", L); y += 6;
   rule();
+  if(o.dedication?.to){d.setFont("courier","bold");tx("Dedication",L);y+=5;d.setFont("courier","normal");const note=d.splitTextToSize(`THIS ONE GOES OUT TO ${o.dedication.to.toUpperCase()}\n"${o.dedication.message??""}"`,68);d.text(note,L,y);y+=note.length*4+5;}
   let bx = 12;
   d.setFillColor(0, 0, 0);
   for (let i = 0; i < 46; i++) {

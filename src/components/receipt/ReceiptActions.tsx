@@ -3,6 +3,8 @@ import { STAGE_W } from "@/lib/machine-layout";
 import { downloadReceipt } from "@/lib/receipt-pdf";
 import type { Order } from "@/lib/orders";
 import { cn } from "@/lib/utils";
+import { shareReceipt } from "@/lib/receipt-share";
+import { Button } from "@/components/ui/button";
 
 /** Buttons beside the printed paper (anchored to image point 1905,770). */
 export function ReceiptActions({
@@ -37,6 +39,7 @@ export function ReceiptActions({
       <button type="button" className="btn-secondary holo-big" onClick={onKeep}>
         Keep shopping
       </button>
+      <Button variant="ghost" className="btn-secondary" onClick={async()=>{try{setMsg(await shareReceipt(order));}catch{setMsg("Sharing cancelled or unavailable.");}}}>SHARE</Button>
       <button type="button" className="btn-secondary holo-big" onClick={onLeave}>
         Tear &amp; leave
       </button>

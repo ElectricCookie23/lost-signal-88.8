@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { TRAY } from "@/lib/machine-layout";
 import type { Faller as FallerState } from "@/hooks/use-machine-store";
+import { readLine } from "@/lib/shopping";
 
 interface FallerProps {
   faller: FallerState;
@@ -17,7 +18,7 @@ export function Faller({ faller, onDone }: FallerProps) {
   return (
     <motion.img
       key={faller.id}
-      src={`/products/${faller.code}.jpg`}
+      src={`/products/${readLine(faller.code).code === "KIT" ? "B1" : readLine(faller.code).code}.jpg`}
       alt=""
       draggable={false}
       className="faller-img"

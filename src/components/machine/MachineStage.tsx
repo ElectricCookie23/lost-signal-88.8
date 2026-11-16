@@ -80,7 +80,7 @@ export function MachineStage({ mode, row, children, rattle = 0, intro = false, d
           <img
             src="/machine/machine-empty.jpg"
             alt="The Lost Signal 88.8 vending machine in a dark corridor"
-            className="absolute inset-0 h-full w-full select-none"
+            className="machine-photo absolute inset-0 h-full w-full select-none"
             draggable={false}
           />
           {children}

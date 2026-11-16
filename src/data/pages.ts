@@ -14,10 +14,12 @@ export const NIGHT_LOG: [string, string, string][] = [
 
 export const REQUEST_TOPICS = ["Song request", "Order question", "Restock alert", "Shout-out on air", "Something else"] as const;
 
-export type PageName = "station" | "night-log" | "request-line" | "shipping" | "privacy" | "join";
-export const PAGE_SLUGS: PageName[] = ["station", "night-log", "request-line", "shipping", "privacy", "join"];
+export type PageName = "station" | "night-log" | "request-line" | "shipping" | "privacy" | "join" | "night-shift-kit" | "rooftop-session";
+export const PAGE_SLUGS: PageName[] = ["station", "night-log", "request-line", "shipping", "privacy", "join", "night-shift-kit", "rooftop-session"];
 export const PAGE_TITLES: Record<PageName, string> = {
   station: "Station",
+  "night-shift-kit":"Night Shift Kit",
+  "rooftop-session":"Rooftop Session 004",
   "night-log": "Night Log",
   "request-line": "Request Line",
   shipping: "Shipping & Returns",
@@ -26,6 +28,8 @@ export const PAGE_TITLES: Record<PageName, string> = {
 };
 export const PAGE_DESCS: Record<PageName, string> = {
   station: "Nobody's supposed to know where we are. The story of the pirate station behind the vending machine.",
+  "night-shift-kit":"Hoodie, cassette and pocket receiver for QAR 349.",
+  "rooftop-session":"One night, one band, one antenna. Rooftop Session 004.",
   "night-log": "20:00 to 06:00 — one night at Lost Signal 88.8, in ten photos.",
   "request-line": "Open 8PM to 6AM. Lines are always busy. Leave a message for the booth.",
   shipping: "Free shipping within Qatar in 3–5 days. Returns within 14 days if unused.",

@@ -52,15 +52,50 @@ export type Database = {
           },
         ]
       }
+      mystery_claims: {
+        Row: {
+          code: string
+          id: string
+          size: string | null
+          used: boolean
+          visit: string
+        }
+        Insert: {
+          code: string
+          id?: string
+          size?: string | null
+          used?: boolean
+          visit: string
+        }
+        Update: {
+          code?: string
+          id?: string
+          size?: string | null
+          used?: boolean
+          visit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mystery_claims_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       orders: {
         Row: {
           created_at: string
+          dedication: Json
           discount: number
           discount_qar: number
           email: string
           id: string
+          is_ghost: boolean
           items: Json
           order_no: string
+          promotions: Json
           shipping: Json
           status: string
           subtotal: number
@@ -71,12 +106,15 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          dedication?: Json
           discount?: number
           discount_qar?: number
           email: string
           id?: string
+          is_ghost?: boolean
           items?: Json
           order_no: string
+          promotions?: Json
           shipping?: Json
           status?: string
           subtotal?: number
@@ -87,12 +125,15 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          dedication?: Json
           discount?: number
           discount_qar?: number
           email?: string
           id?: string
+          is_ghost?: boolean
           items?: Json
           order_no?: string
+          promotions?: Json
           shipping?: Json
           status?: string
           subtotal?: number
@@ -102,6 +143,35 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      product_variants: {
+        Row: {
+          base_stock: number
+          code: string
+          size: string
+          stock: number
+        }
+        Insert: {
+          base_stock?: number
+          code: string
+          size: string
+          stock?: number
+        }
+        Update: {
+          base_stock?: number
+          code?: string
+          size?: string
+          stock?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -236,6 +306,24 @@ export type Database = {
           },
         ]
       }
+      shopping_cart: {
+        Row: {
+          line_key: string
+          qty: number
+          user_id: string
+        }
+        Insert: {
+          line_key: string
+          qty: number
+          user_id: string
+        }
+        Update: {
+          line_key?: string
+          qty?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       station_events: {
         Row: {
           area: string | null
@@ -270,15 +358,21 @@ export type Database = {
       }
       station_state: {
         Row: {
+          ghost_listeners: number
           id: number
+          listeners_updated_at: string
           next_ghost_at: string
         }
         Insert: {
+          ghost_listeners?: number
           id?: number
+          listeners_updated_at?: string
           next_ghost_at?: string
         }
         Update: {
+          ghost_listeners?: number
           id?: number
+          listeners_updated_at?: string
           next_ghost_at?: string
         }
         Relationships: []
@@ -330,17 +424,21 @@ export type Database = {
         Returns: undefined
       }
       claim_orders: { Args: { p_ids: string[] }; Returns: number }
+      dead_hours: { Args: { t?: string }; Returns: boolean }
       ghost_tick: { Args: never; Returns: undefined }
       guest_orders: {
         Args: { p_ids: string[] }
         Returns: {
           created_at: string
+          dedication: Json
           discount: number
           discount_qar: number
           email: string
           id: string
+          is_ghost: boolean
           items: Json
           order_no: string
+          promotions: Json
           shipping: Json
           status: string
           subtotal: number
@@ -363,6 +461,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      mystery_drop: { Args: { p_visit: string }; Returns: Json }
       place_order:
         | {
             Args: {
@@ -383,7 +482,19 @@ export type Database = {
             }
             Returns: Json
           }
+        | {
+            Args: {
+              p_dedication: Json
+              p_email: string
+              p_items: Json
+              p_kicked: boolean
+              p_secret: boolean
+              p_shipping: Json
+            }
+            Returns: Json
+          }
       refill_all: { Args: never; Returns: undefined }
+      station_audience: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "admin" | "user"

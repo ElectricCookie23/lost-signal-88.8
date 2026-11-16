@@ -73,6 +73,7 @@ export function Navigator(p: Props) {
             </li>
           ))}
         </ul>
+        <Link to="/$view" params={{view:"night-shift-kit"}} className="nav-sec" onClick={p.onClose}>Night Shift Kit · QAR 349</Link>
         <button type="button" className="nav-sec" onClick={go(p.onCart)}>Cart <span className="nav-count">{p.cartCount}</span></button>
         <button type="button" className="nav-sec" onClick={go(p.onSaved)}>♥ Saved <span className="nav-count">{p.savedCount}</span></button>
         <button type="button" className="nav-sec" onClick={go(p.onOrders)}>Orders &amp; receipts</button>
@@ -96,7 +97,7 @@ export function Navigator(p: Props) {
             <button type="button" onClick={go(p.onSignIn)}>Sign in</button>
           )}
           <button type="button" onClick={p.onSound}>{p.muted ? "Sound off" : "Sound on"}</button>
-          <button type="button" onClick={go(p.onToggleAir)}>{p.onAir ? "Back to daylight" : "Skip to tonight"}</button>
+          <button type="button" onClick={go(p.onToggleAir)}>{p.onAir ? "Back to daylight" : "Turn the lights on"}</button>
           <button type="button" onClick={go(p.onExit)}>Exit</button>
         </div>
         <div className="nav-mobile-foot">

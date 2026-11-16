@@ -1,0 +1,3 @@
+import { useEffect,useState } from "react";
+import { isDeadHours,restockIn } from "@/lib/shopping";
+export function useClock(){ const [date,setDate]=useState<Date|null>(null); useEffect(()=>{setDate(new Date()); const t=setInterval(()=>setDate(new Date()),1000);return()=>clearInterval(t);},[]);return {dead:date?isDeadHours(date):false,countdown:date?restockIn(date):"",alternate:date?Math.floor(date.getTime()/5000)%2===0:false}; }

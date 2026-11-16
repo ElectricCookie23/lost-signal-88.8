@@ -3,6 +3,7 @@ import { Fragment, useEffect, useState } from "react";
 import { PRODUCTS, type Product } from "@/data/products";
 import { SLOT_COLS, SLOT_H, SLOT_ROWS, SLOT_W } from "@/lib/machine-layout";
 import { cn } from "@/lib/utils";
+import { useClock } from "@/hooks/use-clock";
 
 interface SlotGridProps {
   selected: string | null;
@@ -58,6 +59,7 @@ function Slot({
   onOpen: (code: string) => void;
 }) {
   const col = index % 4;
+  const clock=useClock();
   const row = Math.floor(index / 4);
   const soldOut = product.stock === 0;
   const allInCart = !soldOut && avail === 0;
@@ -97,7 +99,7 @@ function Slot({
         <img src={`/products/${product.code}.jpg`} alt="" draggable={false} />
         <img className="slot-hover-img" src={`/hover/${product.code}.jpg`} alt="" draggable={false} />
       </span>
-      {soldOut && <span className="soldout-stamp">SOLD OUT</span>}
+      {soldOut && <span className="soldout-stamp">SOLD OUT<br/>BACK AT 8PM</span>}
       <span key={`chip-${tick}`} className={cn("slot-chip", tick > 0 && "is-tick")}>
         <b>{product.code}</b>
         <i className={cn(avail <= 3 && "low")}>{allInCart ? "IN CART" : stockLabel(avail)}</i>
@@ -105,7 +107,7 @@ function Slot({
       {hovered && !soldOut && (
         <span className="slot-tip">
           <span className="slot-tip-name">{product.name.toUpperCase()}</span>
-          <span className="slot-tip-price">QAR {product.price.toFixed(2)}</span>
+          <span className="slot-tip-price">QAR {(product.price*(clock.dead?.85:1)).toFixed(2)}</span>
         </span>
       )}
       </span>

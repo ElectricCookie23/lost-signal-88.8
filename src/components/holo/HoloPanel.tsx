@@ -7,6 +7,10 @@ import { fetchOrders, fmtDate, lastShipping, rememberShipping, type Order, type 
 import { downloadReceipt } from "@/lib/receipt-pdf";
 import { HoloHero, PageView } from "@/components/holo/Pages";
 import { HEROES, PAGE_TITLES, type PageName } from "@/data/pages";
+import { useProductPresence } from "@/hooks/use-product-presence";
+import { useClock } from "@/hooks/use-clock";
+import { lineKey, readLine, lineProduct, SIZES, shoppingTotals } from "@/lib/shopping";
+import { SizePicker, KitView, Tracking } from "./ShoppingExtras";
 
 export type Panel =
   | { kind: "product"; code: string }
@@ -158,9 +162,11 @@ function OrdersView({ signedIn, onBuyAgain, highlight }: { signedIn: boolean; on
             <div className="holo-order-meta">
               {fmtDate(o.created_at)} · {(() => { const n = o.items.reduce((a, i) => a + i.qty, 0); return `${n} ${n === 1 ? "item" : "items"}`; })()}
             </div>
+            <Tracking created={o.created_at}/>
+            <div className="holo-copy">{o.items.map(i=>`${i.name}${i.size ? ` · ${i.size}` : ""}`).join(", ")}</div>
             <div className="holo-order-thumbs">
               {o.items.map((i, n) => (
-                <img key={n} src={`/products/${i.code}.jpg`} alt={i.name} title={`${i.code} ${i.name}`} />
+                <img key={n} src={`/products/${i.code === "KIT" ? "B1" : i.code}.jpg`} alt={i.name} title={`${i.code} ${i.name}`} />
               ))}
             </div>
             <div className="holo-acts mt-1.5">
@@ -216,7 +222,10 @@ function CheckoutView({
   const [paid, setPaid] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const { total } = cartTotals(store.cart, store.kicked);
+  const clock = useClock();
+  const [gift,setGift]=useState(false);
+  const [dedication,setDedication]=useState({to:"",message:""});
+  const { total } = shoppingTotals(store.cart, store.kicked,clock.dead);
 
   const field = (k: keyof Shipping, label: string, type = "text", auto?: string) => (
     <label className="holo-field">
@@ -251,6 +260,7 @@ function CheckoutView({
             setErrs(er);
             if (Object.keys(er).length) return;
             setShip(t);
+            if(gift) setShip({...t,dedication});
             rememberShipping(t);
             setStep(2);
           }}
@@ -263,6 +273,8 @@ function CheckoutView({
             {field("country", "COUNTRY")}
           </div>
           <div className="holo-acts">
+            <label className="holo-copy"><input type="checkbox" checked={gift} onChange={e=>setGift(e.target.checked)}/> This one&apos;s a dedication</label>
+            {gift && <><label className="holo-field"><span>TO</span><input value={dedication.to} maxLength={100} required onChange={e=>setDedication(d=>({...d,to:e.target.value}))}/></label><label className="holo-field"><span>MESSAGE</span><textarea value={dedication.message} maxLength={120} onChange={e=>setDedication(d=>({...d,message:e.target.value}))}/><small>{dedication.message.length}/120</small></label></>}
             <button type="submit" className="btn-primary holo-add flex-1">Continue to payment</button>
           </div>
           {prefill.welcome && (
@@ -379,17 +391,22 @@ function ProductList({ codes, store, onOpen }: { codes: string[]; store: Machine
 }
 
 function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; store: MachineStore; onAdd: HoloPanelProps["onAdd"]; onOpenCart: () => void; email?: string | null | undefined }) {
+  const viewers = useProductPresence(code);
+  const clock=useClock();
+  const [size,setSize]=useState("");
   const p = PRODUCT_BY_CODE[code];
   const [qty, setQty] = useState(1);
   const [photo, setPhoto] = useState<"main" | "hover">("main");
   const [added, setAdded] = useState(false);
   useEffect(() => {
     setQty(1);
+    setSize("");
     setPhoto("main");
     setAdded(false);
   }, [code]);
   if (!p) return null;
-  const avail = store.available(code);
+  const key=lineKey(code,size);
+  const avail = store.available(key);
   const saved = store.saved.includes(code);
   const calls = CALLS[code] ?? [];
   const src = photo === "main" ? `/products/${code}.jpg` : `/hover/${code}.jpg`;
@@ -398,10 +415,13 @@ function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; 
       <div className="holo-lcd holo-code">{code}</div>
       <h2 className="holo-h1">{p.name}</h2>
       <div className="holo-price-row">
-        <span className="holo-price">QAR {p.price.toFixed(2)}</span>
+        <span className="holo-price">QAR {(p.price*(clock.dead?.85:1)).toFixed(2)}</span>
         {p.tag && <span className="holo-pill">{p.tag.toUpperCase()}</span>}
       </div>
       <StockLine code={code} store={store} />
+      {SIZES[code] && <SizePicker code={code} value={size} onChange={setSize} store={store}/>}
+      {code==="B2" && <div className="holo-lcd">ONE SIZE</div>}
+      {viewers > 0 && <div className="holo-stock ok">● {viewers} {viewers === 1 ? "other" : "others"} looking at this</div>}
       <div className="holo-gal">
         <img className="holo-gal-main" src={src} alt={p.name} />
         <div className="holo-swipe" aria-label="Photos, swipe">
@@ -463,9 +483,9 @@ function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; 
         <button
           type="button"
           className="btn-primary holo-add"
-          disabled={avail === 0}
+          disabled={avail === 0 || (!!SIZES[code] && !size)}
           onClick={() => {
-            onAdd(code, Math.min(qty, avail));
+            onAdd(key, Math.min(qty, avail));
             setAdded(true);
             setQty(1);
           }}
@@ -484,6 +504,7 @@ function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; 
 }
 
 function CartView({ store, onClose, note, onCheckout }: { store: MachineStore; onClose: () => void; note?: string | null | undefined; onCheckout?: (() => void) | undefined }) {
+  const clock=useClock();
   const lines = Object.entries(store.cart);
   if (!lines.length) {
     return (
@@ -498,7 +519,7 @@ function CartView({ store, onClose, note, onCheckout }: { store: MachineStore; o
       </>
     );
   }
-  const { subtotal, discount, total } = cartTotals(store.cart, store.kicked);
+  const { subtotal, discount, total } = shoppingTotals(store.cart, store.kicked,clock.dead);
   const goneBeaten = Object.keys(store.beaten).filter((c) => !store.cart[c]);
   return (
     <>
@@ -510,14 +531,15 @@ function CartView({ store, onClose, note, onCheckout }: { store: MachineStore; o
         <div key={c} className="holo-beaten">{c} {PRODUCT_BY_CODE[c]?.name}: someone beat you to it. Only 0 left.</div>
       ))}
       {lines.map(([c, n]) => {
-        const p = PRODUCT_BY_CODE[c];
+        const p = lineProduct(c);
+        const l=readLine(c);
         if (!p) return null;
         const more = store.available(c);
         return (
           <div key={c} className="holo-line">
-            <img src={`/products/${c}.jpg`} alt="" />
+            <img src={`/products/${l.code === "KIT" ? "B1" : l.code}.jpg`} alt="" />
             <div className="holo-line-name">
-              <span className="nm">{c} {p.name.toUpperCase()}</span>
+              <span className="nm">{l.code} {p.name.toUpperCase()}{l.size ? ` · ${l.size}` : ""}</span>
               <small>
                 QAR {p.price.toFixed(2)} each · {more ? `${more} more available` : "no more in stock"}
               </small>
@@ -536,9 +558,10 @@ function CartView({ store, onClose, note, onCheckout }: { store: MachineStore; o
       })}
       <div className="holo-sum">
         <div><span>SUBTOTAL</span><span>{subtotal.toFixed(2)}</span></div>
-        {store.kicked && (
-          <div className="text-[var(--ls-orange)]"><span>KICKIT · 10% OFF</span><span>−{discount.toFixed(2)}</span></div>
-        )}
+        {clock.dead && <div><span>DEAD HOURS −15%</span></div>}
+        {store.kicked && <div><span>KICKIT −10%</span></div>}
+        {lines.some(([k])=>readLine(k).mystery) && <div><span>MYSTERY −20%</span></div>}
+        {discount>0 && <div><span>DISCOUNT (MAX 25%)</span><span>−{discount.toFixed(2)}</span></div>}
         <div><span>SHIPPING (QATAR)</span><span>FREE</span></div>
         <div className="holo-dash" />
         <div className="holo-total"><span>TOTAL</span><span>QAR {total.toFixed(2)}</span></div>
@@ -620,7 +643,7 @@ export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, on
       {p?.kind === "page" && (
         <>
           {HEROES[p.name] && <HoloHero src={HEROES[p.name] ?? ""} alt={PAGE_TITLES[p.name]} />}
-          <PageView name={p.name} />
+          {p.name === "night-shift-kit" ? <KitView store={store} onAdd={onAdd}/> : <PageView name={p.name} />}
         </>
       )}
       {p?.kind === "cart" && <HoloHero src={HEROES["cart"] ?? ""} alt="Your cart" />}

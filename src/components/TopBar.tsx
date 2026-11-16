@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface TopBarProps {
   cartCount: number;
@@ -11,10 +12,12 @@ interface TopBarProps {
   menuOpen?: boolean;
   hidden?: boolean;
   onAir?: boolean;
+  showLights?: boolean;
+  onLights?: () => void;
 }
 
 /** Slim transparent top bar: ☰ navigator + logo (home) + status dot on the left, saved and cart on the right. */
-export function TopBar({ cartCount, savedCount, onCart, onSaved, onMenu, onHome, menuOpen = false, hidden = false, onAir = true }: TopBarProps) {
+export function TopBar({ cartCount, savedCount, onCart, onSaved, onMenu, onHome, menuOpen = false, hidden = false, onAir = true, showLights, onLights }: TopBarProps) {
   return (
     <header className={cn("topbar", hidden && "is-hidden")}>
       <div className="topbar-left">
@@ -27,6 +30,7 @@ export function TopBar({ cartCount, savedCount, onCart, onSaved, onMenu, onHome,
         </Link>
       </div>
       <div className="topbar-right">
+        {showLights && <Button variant="ghost" className="lights-switch" aria-label="Turn the lights on" onClick={onLights}>☾ <span>TURN THE LIGHTS ON</span></Button>}
         <button type="button" className="icon-btn" aria-label={`Saved, ${savedCount}`} onClick={onSaved}>♥ {savedCount}</button>
         <button type="button" className="icon-btn is-cart" aria-label={`Cart, ${cartCount}`} onClick={onCart}>CART {cartCount}</button>
       </div>

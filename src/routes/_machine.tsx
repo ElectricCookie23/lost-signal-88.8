@@ -25,6 +25,10 @@ import { Beam } from "@/components/holo/Beam";
 import { TopBar } from "@/components/TopBar";
 import { Gate, SignalLost } from "@/components/intro/Gate";
 import { PocketRadio } from "@/components/intro/PocketRadio";
+import { LiveStrip } from "@/components/intro/LiveStrip";
+import { useClock } from "@/hooks/use-clock";
+import { readLine,lineKey,SIZES } from "@/lib/shopping";
+import { Button } from "@/components/ui/button";
 import { StaticOverlay } from "@/components/intro/StaticOverlay";
 import { OutOfOrderNote, SignDark } from "@/components/intro/MachineExtras";
 import { useOnAir } from "@/hooks/use-on-air";
@@ -62,6 +66,10 @@ function Machine() {
   const auth = useAuth();
   const store = useMachineStore(auth.user?.id ?? null);
   const station = useStation();
+  const clock=useClock();
+  const [roulette,setRoulette]=useState<string|null>(null);
+  const [mysteryBusy,setMysteryBusy]=useState(false);
+  const [mysteryDone,setMysteryDone]=useState(false);
   const navigate = useNavigate();
   const { view, no } = useParams({ strict: false }) as { view?: string; no?: string };
   const urlPanel: Panel | null = no ? { kind: "orders", highlight: no.toUpperCase() } : parseView(view);
@@ -214,8 +222,10 @@ function Machine() {
   const buyAgain = (o: Order) => {
     const missing: string[] = [];
     for (const i of o.items) {
-      const k = Math.min(i.qty, store.available(i.code));
-      if (k > 0) store.setQty(i.code, (store.cart[i.code] ?? 0) + k);
+      if(i.bonus) continue;
+      const key=lineKey(i.code,i.size??"");
+      const k = Math.min(i.qty, store.available(key));
+      if (k > 0) store.setQty(key, (store.cart[key] ?? 0) + k);
       if (k < i.qty) missing.push(i.code);
     }
     setLocal({ kind: "cart" });
@@ -352,9 +362,10 @@ function Machine() {
   }, [printing]);
 
   const addWithCoin = (code: string | null, qty = 1) => {
+    if(code && SIZES[readLine(code).code] && !readLine(code).size){openProduct(readLine(code).code);return;}
     if (!code) { store.addToTray({ x: 0, y: 0 }); return; }
     if (store.available(code) > 0) play("coin", { vol: 0.9 });
-    store.addToTray(slotPos(code), code, qty);
+    store.addToTray(slotPos(readLine(code).code === "KIT" ? "B1" : readLine(code).code), code, qty);
   };
 
   const openSaved = () => {
@@ -428,10 +439,19 @@ function Machine() {
 
   const handleAdd = () => addWithCoin(store.selected);
 
-  const lcdText = !onAir && store.lcdText.startsWith("CART ") ? "OFF AIR\nTILL 8PM" : store.lcdText;
+  const lcdText = clock.alternate && clock.dead ? "DEAD HOURS\n15% OFF" : clock.alternate && !air.real ? `RESTOCK IN\n${clock.countdown}` : store.lcdText;
+  const mysteryBuy=async()=>{
+    if(mysteryBusy||mysteryDone)return;setMysteryBusy(true);play("coin",{vol:.9});
+    try{let visit=sessionStorage.getItem("ls888_mystery_visit");if(!visit){visit=crypto.randomUUID();sessionStorage.setItem("ls888_mystery_visit",visit);}
+      const {data,error}=await supabase.rpc("mystery_drop",{p_visit:visit});if(error)throw error;
+      const m=data as {id:string;code:string;size:string|null;used:boolean};if(m.used){setMysteryDone(true);return;}
+      for(let i=0;i<24;i++)later(()=>setRoulette(`${"ABCD"[Math.floor((i%16)/4)]}${i%4+1}`),Math.round(3000*(i/24)**1.6));
+      later(()=>{setRoulette(m.code);addWithCoin(lineKey(m.code,m.size??"",m.id));setMysteryDone(true);setMysteryBusy(false);later(()=>setRoulette(null),700);},3000);
+    }catch{store.flashLcd("NO SIGNAL\nTRY AGAIN");setMysteryBusy(false);}
+  };
 
   const cartItems = Object.entries(store.cart).flatMap(([code, qty]) =>
-    Array.from({ length: qty }, () => code),
+    Array.from({ length: qty }, () => readLine(code).code === "KIT" ? "B1" : readLine(code).code),
   );
 
   return (
@@ -445,7 +465,7 @@ function Machine() {
           onPage={(v) => navigate({ to: "/$view", params: { view: v } })}
         />
         <SlotGrid
-          selected={store.selected}
+          selected={roulette??store.selected}
           available={store.available}
           onSelect={pick}
           onOpen={openProduct}
@@ -458,6 +478,8 @@ function Machine() {
           tipKey={`${mode}:${row}:${panel?.kind ?? ""}:${receipt ? 1 : 0}`}
         />
         <Lcd text={lcdText} />
+        <Button variant="ghost" className="kit-strip" onClick={()=>navigate({to:"/$view",params:{view:"night-shift-kit"}})}>NIGHT SHIFT KIT · 3 FOR QAR 349</Button>
+        <Button variant="ghost" className="coin-slot" aria-label="Insert coin · Mystery drop" title="INSERT COIN · MYSTERY DROP" disabled={mysteryBusy||mysteryDone} onClick={()=>void mysteryBuy()}/>
         <Keypad selected={store.selected} available={store.available} onSelect={keypadPress} />
         <MachineButtons onAdd={handleAdd} onSave={store.toggleSave} onClear={close} />
         <PickupTray items={cartItems} onOpen={openCart} />
@@ -498,7 +520,7 @@ function Machine() {
         />
       )}
       <MobileDock
-        lcdText={store.lcdText}
+        lcdText={lcdText}
         selected={store.selected}
         isSaved={!!store.selected && store.saved.includes(store.selected)}
         available={store.available}
@@ -517,6 +539,8 @@ function Machine() {
         onHome={goHome}
         hidden={!barOn}
         onAir={onAir}
+        showLights={!air.real && !onAir}
+        onLights={toggleAir}
       />
       <Footer hidden={!barOn} onOrders={() => openPanel("orders")} onJoin={() => { store.clearSelection(); setLocal({ kind: "page", name: "join" }); }} />
       <Navigator
@@ -541,6 +565,7 @@ function Machine() {
         onAir={onAir}
       />
       <PocketRadio hidden={!barOn} listeners={station.listeners} events={station.events} />
+      <LiveStrip hidden={!barOn} listeners={station.listeners} events={station.events} toast={station.toast} onProduct={openProduct} notice={clock.dead ? "DEAD HOURS · 15% OFF" : !onAir ? "OFF AIR · BACK AT 8PM" : undefined} />
       <Gate
         hidden={phase !== "gate"}
         welcome={visits > 0 ? `Welcome back, night owl.${store.cartCount ? ` Your cart still has ${store.cartCount} item${store.cartCount > 1 ? "s" : ""}.` : ""}` : null}

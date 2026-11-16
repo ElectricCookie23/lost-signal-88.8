@@ -12,3 +12,6 @@
 - [x] Extra interactivity: dial tuner, lock-in, intro static handoff, flashlight, secret code, receipt QR, spatial hum, no voice lines
 - [x] Phase 6: navigator, extra pages, footer, publishing details, full mobile, polish
 - [x] After phase 6: full feature check, error log, fixes, final pass
+- [ ] Prompt A: day/night controls, presentation fixes, ghost orders, live presence, strip and sale reactions
+- [ ] Prompt B (after A): sizes, kit, dedications, sharing, discounts, mystery drop, restock countdown and tracking
+- [ ] Prompt C (after A and B): atmosphere and depth from the uploaded brief
