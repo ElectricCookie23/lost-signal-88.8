@@ -38,7 +38,7 @@ import { OutOfOrderNote, SignDark } from "@/components/intro/MachineExtras";
 import { useOnAir } from "@/hooks/use-on-air";
 import { click, fadeOut, humOn, humSpatial, initMute, lockIn, play, radio, setMuted, tunerStop, unlock, type Voice } from "@/lib/audio";
 import { Flashlight } from "@/components/intro/Flashlight";
-import { Line2, PowerCut } from "@/components/intro/NightEvents";
+import { BROWNOUT_KEY, Line2, PowerCut } from "@/components/intro/NightEvents";
 import { secretMatch } from "@/lib/secret";
 import { PRODUCT_BY_CODE, ROW_SLUGS } from "@/data/products";
 import { MOBILE_TICKER, SLOT_COLS, SLOT_ROWS, type CameraMode } from "@/lib/machine-layout";
@@ -606,10 +606,17 @@ function Machine() {
         onRestore={() => {
           // brownout prices ride on the existing 10% "kicked" discount for 60 seconds
           const already = store.kicked;
-          if (!already) store.setKicked(true);
           store.flashLcd("BROWNOUT\n10% OFF · 60s", 5000);
-          if (!already) later(() => { store.setKicked(false); store.flashLcd("POWER\nSTABLE", 2500); }, 60000);
+          if (already) return;
+          store.setKicked(true);
+          try { localStorage.setItem(BROWNOUT_KEY, String(Date.now() + 60000)); } catch { /* blocked */ }
+          later(() => {
+            try { localStorage.removeItem(BROWNOUT_KEY); } catch { /* blocked */ }
+            store.setKicked(false);
+            store.flashLcd("POWER\nSTABLE", 2500);
+          }, 60000);
         }}
+        onExpire={() => { store.setKicked(false); store.flashLcd("POWER\nSTABLE", 2500); }}
       />
       <LiveStrip hidden={!barOn} listeners={station.listeners} events={station.events} toast={station.toast} onProduct={openProduct} notice={[weather==="rain"?"RAINING IN DOHA · RARE NIGHT":"",clock.dead?"DEAD HOURS · 15% OFF":!onAir?"OFF AIR · BACK AT 8PM":""].filter(Boolean).join(" ✦ ")} />
       <Gate
