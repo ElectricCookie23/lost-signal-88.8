@@ -459,14 +459,14 @@ function Machine() {
 
   const handleAdd = () => addWithCoin(store.selected);
 
-  const lcdText = clock.alternate && clock.dead ? "DEAD HOURS\n15% OFF" : clock.alternate && !air.real ? `RESTOCK IN\n${clock.countdown}` : store.lcdText;
+  const lcdText = clock.alternate && clock.dead ? "DEAD HOURS\n15% OFF" : clock.alternate && !onAir ? `RESTOCK IN\n${clock.countdown}` : store.lcdText;
   const mysteryBuy=async()=>{
     if(mysteryBusy||mysteryDone)return;setMysteryBusy(true);play("coin",{vol:.9});
     try{let visit=sessionStorage.getItem("ls888_mystery_visit");if(!visit){visit=crypto.randomUUID();sessionStorage.setItem("ls888_mystery_visit",visit);}
       const {data,error}=await supabase.rpc("mystery_drop",{p_visit:visit});if(error)throw error;
       const m=data as {id:string;code:string;size:string|null;used:boolean};if(m.used){setMysteryDone(true);return;}
       for(let i=0;i<24;i++)later(()=>setRoulette(`${"ABCD"[Math.floor((i%16)/4)]}${i%4+1}`),Math.round(3000*(i/24)**1.6));
-      later(()=>{setRoulette(m.code);addWithCoin(lineKey(m.code,m.size??"",m.id));sessionStorage.setItem("ls888_mystery_done","1");setMysteryDone(true);setMysteryBusy(false);later(()=>setRoulette(null),700);},3000);
+      later(()=>{setRoulette(m.code);addWithCoin(lineKey(m.code,m.size??"",m.id));sessionStorage.setItem("ls888_mystery_done","1");setMysteryDone(true);setMysteryBusy(false);later(()=>{setRoulette(null);close();},700);},3000);
     }catch{store.flashLcd("NO SIGNAL\nTRY AGAIN");setMysteryBusy(false);}
   };
 
@@ -499,7 +499,8 @@ function Machine() {
         />
         <GlassWeather weather={weather}/>
         <Lcd text={lcdText} onClick={lastProduct?()=>openProduct(lastProduct):undefined}/>
-        <Button variant="ghost" className="kit-strip" onClick={()=>navigate({to:"/$view",params:{view:"night-shift-kit"}})}>NIGHT SHIFT KIT · 3 FOR QAR 349</Button>
+        <Button variant="ghost" className="kit-strip" onClick={()=>navigate({to:"/$view",params:{view:"night-shift-kit"}})}>NIGHT SHIFT KIT · 3 FOR QAR 349 · SAVE 65</Button>
+        <Button variant="ghost" className="kit-strip kit-mobile" onClick={()=>navigate({to:"/$view",params:{view:"night-shift-kit"}})}>NIGHT SHIFT KIT · 3 FOR QAR 349 · SAVE 65</Button>
         <Button variant="ghost" className="coin-slot" aria-label="Insert coin · Mystery drop" title="INSERT COIN · MYSTERY DROP" disabled={mysteryBusy||mysteryDone} onClick={()=>void mysteryBuy()}/>
         <Keypad selected={store.selected} available={store.available} onSelect={keypadPress} />
         <MachineButtons onAdd={handleAdd} onSave={store.toggleSave} onClear={close} />

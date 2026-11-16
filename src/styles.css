@@ -1620,3 +1620,9 @@
 .glass-fog i { position:absolute;width:100px;height:35px;border-radius:50%;pointer-events:none;background:color-mix(in srgb,var(--ls-fog) 18%,transparent);filter:blur(12px);animation:fog-fade 4s ease-out forwards; }
 @keyframes fog-fade { to { opacity:0; } }
 @media (prefers-reduced-motion:reduce){.rooftop-still img,.glass-rain,.heat-shimmer{animation:none;}}
+/* kit strip: full glass width, glowing, slow pulse */
+.kit-strip { left:860px;top:926px;width:780px;height:30px;font:24px VT323,monospace;letter-spacing:1px;color:var(--ls-glow);text-shadow:0 0 6px var(--ls-glow),0 0 14px var(--ls-glow);background:transparent;animation:kit-pulse 2.8s ease-in-out infinite; }
+.kit-strip.kit-mobile { display:none;top:1110px;left:860px;width:780px;height:40px;font-size:30px; }
+@keyframes kit-pulse { 0%,100%{opacity:.75} 50%{opacity:1;filter:brightness(1.25)} }
+@media (max-width:759px){ .kit-strip.kit-mobile{display:flex} .sale-toast{bottom:104px} }
+@media (prefers-reduced-motion: reduce){ .kit-strip{animation:none} }

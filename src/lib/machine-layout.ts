@@ -33,7 +33,7 @@ export type CameraMode = "wide" | "focus" | "row" | "receipt";
 export function viewRect(mode: CameraMode, row: number | null, mobile: boolean): [number, number, number, number] {
   // phones: glass (menu strip + 4x4 slots + tray) spans the full screen width
   if (mobile && mode === "receipt") return [1680, 700, 270, 420]; // printer slot + paper
-  if (mobile) return [858, 25, 862, 1090]; // sign → tray + ticker
+  if (mobile) return [838, 25, 824, 1130]; // sign → tray + ticker + kit line
   if (mode === "receipt") return [1650, 690, 360, 340];
   if (mode === "row" && row != null) {
     // glass only (x860, w780): menu strip + row A, or just the row for B–D
@@ -113,7 +113,7 @@ export function computeCamera(
   let tx = a.x + (a.w - w * s) / 2 - x * s;
   // phones: top-align right under the top bar; leftover space shows the backdrop
   let ty = a.y + (a.h - h * s) / 2 - y * s;
-  if (mobile && mode === "wide") ty = a.y - y * s;
+  if (mobile && mode === "wide") ty = a.y + Math.max(0, (a.h - h * s) / 2) - y * s;
   if (cover) {
     tx = Math.min(0, Math.max(vw - STAGE_W * s, tx));
     ty = Math.min(a.y, Math.max(vh - STAGE_H * s, ty));

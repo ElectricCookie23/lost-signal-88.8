@@ -64,6 +64,13 @@
       "when": 1794803851962,
       "tag": "0008_shopping_atomicity_and_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794805353820,
+      "tag": "0009_ghost_half_stock_rule",
+      "breakpoints": true
     }
   ]
 }
