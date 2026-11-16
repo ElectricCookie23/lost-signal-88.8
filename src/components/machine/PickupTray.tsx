@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { TRAY } from "@/lib/machine-layout";
+import { readLine } from "@/lib/shopping";
 
 interface PickupTrayProps {
   items: string[]; // product codes, one entry per unit
@@ -22,7 +23,7 @@ export function PickupTray({ items, onOpen }: PickupTrayProps) {
         {shown.map((code, i) => (
           <motion.img
             key={`${code}-${i}`}
-            src={`/products/${code}.jpg`}
+            src={`/products/${readLine(code).code==="KIT"?"B1":readLine(code).code}.jpg`}
             alt=""
             draggable={false}
             className="tray-thumb"

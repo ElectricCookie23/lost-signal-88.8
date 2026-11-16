@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PRODUCT_BY_CODE } from "@/data/products";
 import { supabase } from "@/integrations/supabase/client";
 import type { CameraMode } from "@/lib/machine-layout";
-import { readLine, VARIANTS, SIZES } from "@/lib/shopping";
+import { readLine, VARIANTS, remainingStock } from "@/lib/shopping";
 
 const CART_KEY = "ls888_size_cart";
 const SAVED_KEY = "ls888_saved";
@@ -78,20 +78,7 @@ export function useMachineStore(userId: string | null = null) {
     setStockTick((t) => t + 1);
     if (animate) setTicks((t) => Object.fromEntries([...Object.entries(t), ...changed.map((c) => [c, (t[c] ?? 0) + 1])]));
     // clamp carts that now exceed real stock
-    setCart((c) => {
-      let next = c;
-      for (const code of changed) {
-        const max = PRODUCT_BY_CODE[readLine(code).code]?.stock ?? 0;
-        const have = c[code] ?? 0;
-        if (have > max) {
-          if (next === c) next = { ...c };
-          if (max === 0) delete next[code];
-          else next[code] = max;
-          setBeaten((b) => ({ ...b, [code]: max }));
-        }
-      }
-      return next;
-    });
+    // Variant updates arrive separately; checkout authoritatively resolves conflicts.
   }, []);
 
   useEffect(() => {
@@ -207,10 +194,7 @@ export function useMachineStore(userId: string | null = null) {
 
   const available = useCallback(
     (key: string): number => {
-      const {code,size}=readLine(key);
-      if(code==="KIT") return Math.min(availableStock("B1",size),availableStock("A1",""),availableStock("C1",""));
-      return availableStock(code,size);
-      function availableStock(c:string,s:string){const stock=s ? VARIANTS[`${c}|${s}`]??0 : PRODUCT_BY_CODE[c]?.stock??0; const used=Object.entries(cart).reduce((n,[k,q])=>{const l=readLine(k);return n+((l.code===c&&(!s||l.size===s))||(l.code==="KIT"&&["B1","A1","C1"].includes(c)&&(!s||l.size===s))?q:0);},0);return Math.max(0,stock-used);}
+      return remainingStock(key,cart);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [cart, stockTick],
@@ -274,14 +258,14 @@ export function useMachineStore(userId: string | null = null) {
 
   const setQty = useCallback((code: string, qty: number) => {
     setCart((c) => {
-      const l=readLine(code); const max = l.code==="KIT" ? (cart[code]??0)+available(code) : l.size ? VARIANTS[`${l.code}|${l.size}`]??0 : PRODUCT_BY_CODE[l.code]?.stock ?? 0;
+      const others={...c};delete others[code];const max=remainingStock(code,others);
       const n = Math.max(0, Math.min(max, qty));
       const next = { ...c };
       if (n === 0) delete next[code];
       else next[code] = n;
       return next;
     });
-  }, [cart,available]);
+  }, []);
 
   const toggleSave = useCallback((target?: string) => {
     const selected_ = typeof target === "string" ? target : selected;

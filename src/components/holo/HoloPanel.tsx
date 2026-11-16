@@ -11,6 +11,10 @@ import { useProductPresence } from "@/hooks/use-product-presence";
 import { useClock } from "@/hooks/use-clock";
 import { lineKey, readLine, lineProduct, SIZES, shoppingTotals } from "@/lib/shopping";
 import { SizePicker, KitView, Tracking } from "./ShoppingExtras";
+import { STORIES } from "@/data/stories";
+import { Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { useListenerCard } from "@/hooks/use-listener-card";
 
 export type Panel =
   | { kind: "product"; code: string }
@@ -38,6 +42,7 @@ interface HoloPanelProps {
   onRattle?: (() => void) | undefined;
   onPrint?: ((ship: Shipping) => Promise<string | null>) | undefined;
   onBuyAgain?: ((o: Order) => void) | undefined;
+  listenerSince?: string | undefined;
 }
 
 function NotifyMe({ code, email }: { code: string; email?: string | null | undefined }) {
@@ -132,7 +137,8 @@ function SignInView() {
   );
 }
 
-function OrdersView({ signedIn, onBuyAgain, highlight }: { signedIn: boolean; onBuyAgain?: ((o: Order) => void) | undefined; highlight?: string | undefined }) {
+function OrdersView({ signedIn, onBuyAgain, highlight, since }: { signedIn: boolean; onBuyAgain?: ((o: Order) => void) | undefined; highlight?: string | undefined; since?:string | undefined }) {
+  const card=useListenerCard(signedIn,since);
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [msg, setMsg] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -141,6 +147,7 @@ function OrdersView({ signedIn, onBuyAgain, highlight }: { signedIn: boolean; on
   return (
     <>
       <h2 className="holo-h1">Your orders</h2>
+      {card&&<div className="listener-card">◉ 88.8 · {card}</div>}
       <p className="holo-copy mt-1.5 mb-1">Every receipt the machine has printed for you.</p>
       {orders == null ? (
         <p className="holo-lcd mt-3.5">LOADING…</p>
@@ -227,7 +234,7 @@ function CheckoutView({
   const [dedication,setDedication]=useState({to:"",message:""});
   const { total } = shoppingTotals(store.cart, store.kicked,clock.dead);
 
-  const field = (k: keyof Shipping, label: string, type = "text", auto?: string) => (
+  const field = (k: Exclude<keyof Shipping,"dedication">, label: string, type = "text", auto?: string) => (
     <label className="holo-field">
       <span>{label}</span>
       <input
@@ -250,7 +257,7 @@ function CheckoutView({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            const t = Object.fromEntries(Object.entries(ship).map(([k, v]) => [k, v.trim()])) as unknown as Shipping;
+            const t = { ...ship, name:ship.name.trim(), email:ship.email.trim(), address:ship.address.trim(), city:ship.city.trim(), country:ship.country.trim() };
             const er: typeof errs = {};
             if (t.name.length < 2) er.name = "Who's it for?";
             if (!EMAIL_RE.test(t.email)) er.email = "That email doesn't look right.";
@@ -394,6 +401,7 @@ function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; 
   const viewers = useProductPresence(code);
   const clock=useClock();
   const [size,setSize]=useState("");
+  const [story,setStory]=useState(false);
   const p = PRODUCT_BY_CODE[code];
   const [qty, setQty] = useState(1);
   const [photo, setPhoto] = useState<"main" | "hover">("main");
@@ -401,6 +409,7 @@ function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; 
   useEffect(() => {
     setQty(1);
     setSize("");
+    setStory(false);
     setPhoto("main");
     setAdded(false);
   }, [code]);
@@ -414,6 +423,7 @@ function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; 
     <>
       <div className="holo-lcd holo-code">{code}</div>
       <h2 className="holo-h1">{p.name}</h2>
+      <div className="story-tabs"><Button variant="ghost" aria-pressed={!story} onClick={()=>setStory(false)}>DETAILS</Button><Button variant="ghost" aria-pressed={story} onClick={()=>setStory(true)}>THE STORY</Button></div>
       <div className="holo-price-row">
         <span className="holo-price">QAR {(p.price*(clock.dead?.85:1)).toFixed(2)}</span>
         {p.tag && <span className="holo-pill">{p.tag.toUpperCase()}</span>}
@@ -442,7 +452,8 @@ function ProductView({ code, store, onAdd, onOpenCart, email }: { code: string; 
           ))}
         </div>
       </div>
-      <p className="holo-copy">{p.description}</p>
+      <p className="holo-copy">{story?STORIES[code]:p.description}</p>
+      {code==="D2"&&<Link to="/$view" params={{view:"rooftop-session"}} className="holo-link">Watch the session →</Link>}
       {calls.length > 0 && (
         <div className="holo-calls">
           {calls.map(([t, q]) => (
@@ -577,7 +588,7 @@ function CartView({ store, onClose, note, onCheckout }: { store: MachineStore; o
 }
 
 /** The floating hologram panel on the right (desktop). */
-export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, onAdd, email, signedIn = false, onSignIn, userName, cartNote, onCheckout, onRattle, onPrint, onBuyAgain }: HoloPanelProps) {
+export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, onAdd, email, signedIn = false, onSignIn, userName, cartNote, onCheckout, onRattle, onPrint, onBuyAgain, listenerSince }: HoloPanelProps) {
   // keep last content while closing so it fades out instead of blanking
   const [shown, setShown] = useState<Panel | null>(panel);
   const [flick, setFlick] = useState(0);
@@ -652,7 +663,7 @@ export function HoloPanel({ panel, store, onClose, onOpenProduct, onOpenCart, on
         <CheckoutView store={store} email={email} userName={userName} onRattle={onRattle} onPrint={onPrint} />
       )}
       {p?.kind === "signin" && <SignInView />}
-      {p?.kind === "orders" && <OrdersView signedIn={signedIn} onBuyAgain={onBuyAgain} highlight={p.highlight} />}
+      {p?.kind === "orders" && <OrdersView signedIn={signedIn} onBuyAgain={onBuyAgain} highlight={p.highlight} since={listenerSince} />}
     </aside>
   );
 }

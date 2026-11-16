@@ -494,6 +494,7 @@ export type Database = {
             Returns: Json
           }
       refill_all: { Args: never; Returns: undefined }
+      refresh_order_tracking: { Args: never; Returns: undefined }
       station_audience: { Args: never; Returns: number }
     }
     Enums: {

@@ -1,0 +1,18 @@
+export const STORIES:Record<string,string>={
+ A1:"Recorded when the red light should have been off. The tape kept turning, so we kept broadcasting. Side B contains a silence nobody has agreed to edit.",
+ A2:"The first batch arrived with somebody else's wedding labels. We peeled those off. Your mistakes deserve a clean start.",
+ A3:"Found in the booth drawer beside six expired batteries. We replaced the batteries, not the personality. It still prefers side B.",
+ A4:"The transmitter technician stole every pencil. This was our response. It has already outlasted two transmitters.",
+ B1:"Designed for the longest shift in the stairwell. The sleeve dial doesn't tune anything. People keep trying anyway.",
+ B2:"We needed a daytime disguise. Orange was not the sensible choice. Nobody here was hired for discretion.",
+ B3:"A delivery driver left it on the rooftop. We added a reflective stripe and called it uniform. He hasn't asked for it back.",
+ B4:"The laundry room took one sock from every pair. We stopped matching them. Reception improved immediately.",
+ C1:"Built to fit inside a matchbox so it could leave the building quietly. The antenna had other plans. It gets the station from the lift.",
+ C2:"The prototype was supposed to improve reception. It improved conversation instead. We changed the packaging, not the antenna.",
+ C3:"The DJ needed a cable long enough to reach the kettle. These reached the window too. The neighbours have never heard a better silence.",
+ C4:"Rescued from a TV studio the night it closed. It still works. Nobody asked us to give it back.",
+ D1:"Made to cover the old soda prices on the machine. We printed sixty too many. The building manager is still removing them.",
+ D2:"One band, one rooftop, one extension lead. The poster was printed before anyone checked permission. That was probably for the best.",
+ D3:"Seven issues assembled on the same unreliable photocopier. The smudges are not a design decision. We have decided to say they are.",
+ D4:"Mapped from the passenger seat during the night shift. The perfect parking lot is real. Please don't tell the parking attendant.",
+};

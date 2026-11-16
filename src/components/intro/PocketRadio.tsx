@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { isRadioOn, onAudioChange, radio } from "@/lib/audio";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchOrders } from "@/lib/orders";
+import { orderStep, TRACKING } from "@/lib/shopping";
 
 /**
  * Bottom-left pocket transistor radio: play/pause for the station music,
@@ -21,6 +24,11 @@ export function PocketRadio({
   const [card, setCard] = useState(false);
   const [i, setI] = useState(0);
   const [flash, setFlash] = useState(false);
+  const [orderLine,setOrderLine]=useState<string|null>(null);
+  useEffect(()=>{
+    const check=async()=>{const {data}=await supabase.auth.getUser();if(!data.user)return;const orders=await fetchOrders(true);for(const o of orders){const step=orderStep(o.created_at);const key=`ls888_tracking_${o.id}`;const prev=localStorage.getItem(key);localStorage.setItem(key,String(step));if(step>0&&prev!==String(step)){setOrderLine(`YOUR ORDER ${o.order_no} · ${TRACKING[step-1]?.toUpperCase()}`);setTimeout(()=>setOrderLine(null),12000);break;}}};
+    void check();const t=setInterval(()=>void check(),60000);return()=>clearInterval(t);
+  },[]);
   useEffect(() => onAudioChange(() => setOn(isRadioOn())), []);
 
   const latest = events[0];
@@ -41,7 +49,7 @@ export function PocketRadio({
     const t = setTimeout(() => setFlash(false), 1400);
     return () => clearTimeout(t);
   }, [latest?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  const text = lines[i % lines.length] ?? lines[0];
+  const text = orderLine ?? lines[i % lines.length] ?? lines[0];
 
   return (
     <div className={cn("pocket", hidden && "is-hidden", on && "is-on", open && "is-open", card && "is-card")} aria-hidden={hidden}>

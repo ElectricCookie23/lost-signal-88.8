@@ -27,6 +27,7 @@ interface Props {
   isAdmin: boolean;
   muted: boolean;
   onAir: boolean;
+  listenerCard?: string | null;
 }
 
 /** Left sidebar navigator, styled like the hologram. The only menu on desktop and mobile. */
@@ -90,6 +91,7 @@ export function Navigator(p: Props) {
           {p.userName ? (
             <>
               <span>{p.userName}</span>
+              {p.listenerCard&&<div className="listener-card">◉ 88.8 · {p.listenerCard}</div>}
               {p.isAdmin && <Link to="/booth" onClick={p.onClose}>The Booth</Link>}
               <button type="button" onClick={go(p.onSignOut)}>Sign out</button>
             </>

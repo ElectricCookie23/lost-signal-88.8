@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { NIGHT_LOG, REQUEST_TOPICS, type PageName } from "@/data/pages";
 import { play } from "@/lib/audio";
+import { Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 
 /** 16:9 hero image across the top of a hologram panel. */
 export function HoloHero({ src, alt }: { src: string; alt: string }) {
@@ -22,6 +24,7 @@ function Station() {
       <p className="holo-copy mt-2.5">The building has a corridor nobody uses after 8pm. In it was a vending machine that stopped selling soda years ago. We cleaned it out, rewired the lights and filled it with things the station makes.</p>
       <p className="holo-copy mt-2.5">Stock is small and it doesn&apos;t come back often. Every purchase keeps the transmitter running for another night. You either catch the signal or you don&apos;t.</p>
       <p className="holo-lcd mt-3.5 text-[24px] text-[var(--ls-orange)]">SEE YOU AT 8. BRING COINS.</p>
+      <Link to="/$view" params={{view:"rooftop-session"}} className="holo-link">Watch Rooftop Session 004 →</Link>
     </>
   );
 }
@@ -158,7 +161,9 @@ function Privacy() {
   );
 }
 
+function RooftopSession(){const [video,setVideo]=useState(false);const [sound,setSound]=useState(false);useEffect(()=>{const c=new AbortController();void fetch("/video/rooftop-session.mp4",{method:"HEAD",signal:c.signal}).then(r=>setVideo(r.ok&&!!r.headers.get("content-type")?.startsWith("video/"))).catch(()=>{});return()=>c.abort();},[]);return <><h2 className="holo-h1">Rooftop Session 004</h2>{video?<><video className="rooftop-video" src="/video/rooftop-session.mp4" loop muted={!sound} autoPlay playsInline controls/><Button variant="ghost" onClick={()=>setSound(!sound)}>{sound?"Mute session":"Play sound"}</Button></>:<div className="rooftop-still"><img src="/nightlog/2000.jpg" alt="The rooftop at lights-on"/></div>}<p className="holo-copy">Rooftop Session 004. One night, one band, one antenna. The building manager still doesn&apos;t know.</p><Link to="/$view" params={{view:"d2"}} className="holo-link">D2 · Get the poster →</Link></>;}
 export function PageView({ name }: { name: PageName }) {
+  if(name==="rooftop-session")return <RooftopSession/>;
   if (name === "station") return <Station />;
   if (name === "night-log") return <NightLog />;
   if (name === "request-line") return <RequestLine />;

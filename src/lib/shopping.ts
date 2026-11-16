@@ -4,6 +4,11 @@ export const VARIANTS: Record<string,number> = {};
 export const lineKey = (code:string,size="",mystery="") => [code,size,mystery].join("|");
 export const readLine = (key:string) => { const [code="",size="",mystery=""] = key.split("|"); return {code,size,mystery}; };
 export const lineProduct = (key:string) => readLine(key).code === "KIT" ? {code:"KIT",name:"Night Shift Kit",price:349} : PRODUCT_BY_CODE[readLine(key).code];
+export function remainingStock(key:string,cart:Record<string,number>,products:Record<string,{stock:number}>=PRODUCT_BY_CODE,variants:Record<string,number>=VARIANTS):number {
+ const {code,size}=readLine(key);
+ const remaining=(c:string,s:string)=>{const stock=s?variants[`${c}|${s}`]??0:products[c]?.stock??0;const used=Object.entries(cart).reduce((n,[k,q])=>{const l=readLine(k);const direct=l.code===c&&(!s||l.size===s);const kit=l.code==="KIT"&&["B1","A1","C1"].includes(c)&&(!s||l.size===s);return n+(direct||kit?q:0);},0);return Math.max(0,stock-used);};
+ return code==="KIT"?Math.min(remaining("B1",size),remaining("A1",""),remaining("C1","")):remaining(code,size);
+}
 export const isDeadHours = (d=new Date()) => { const h=Number(new Intl.DateTimeFormat("en-GB",{hour:"numeric",hour12:false,timeZone:"Asia/Qatar"}).format(d))%24; return h>=2&&h<4; };
 export const promotionRate = (dead:boolean,kicked:boolean,mystery:boolean) => Math.min(.25,(dead?.15:0)+(kicked?.10:0)+(mystery?.20:0));
 export function shoppingTotals(cart:Record<string,number>,kicked:boolean,dead=false) {

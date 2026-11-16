@@ -57,6 +57,13 @@
       "when": 1794803411338,
       "tag": "0007_shopping_variants_and_promotions",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794803851962,
+      "tag": "0008_shopping_atomicity_and_tracking",
+      "breakpoints": true
     }
   ]
 }

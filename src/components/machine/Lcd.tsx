@@ -2,11 +2,15 @@ import { motion } from "framer-motion";
 import { LCD } from "@/lib/machine-layout";
 
 /** The machine's little glowing display. Text uses \n for its two lines. */
-export function Lcd({ text }: { text: string }) {
+export function Lcd({ text, onClick }: { text: string; onClick?: (()=>void) | undefined }) {
   return (
     <motion.div
       aria-live="polite"
       className="machine-lcd"
+      role={onClick?"button":undefined}
+      tabIndex={onClick?0:undefined}
+      onClick={onClick}
+      onKeyDown={e=>{if(onClick&&(e.key==="Enter"||e.key===" "))onClick();}}
       style={{ ...LCD }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}

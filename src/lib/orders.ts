@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { readLine } from "@/lib/shopping";
+import { readLine, orderStep, TRACKING } from "@/lib/shopping";
 
 export interface OrderItem {
   code: string;
@@ -44,6 +44,7 @@ function norm(raw: unknown): Order {
   const o = raw as Order & { subtotal_qar?: number; discount_qar?: number; total_qar?: number };
   return {
     ...o,
+    status: TRACKING[orderStep(o.created_at)-1] ?? o.status,
     items: (o.items ?? []).map((i) => ({ ...i, price: money(i.price) })),
     subtotal: money(o.subtotal_qar ?? o.subtotal),
     discount: money(o.discount_qar ?? o.discount),
