@@ -470,10 +470,10 @@ function Machine() {
     if(mysteryBusy||mysteryDone)return;setMysteryBusy(true);play("coin",{vol:.9});
     try{let visit=sessionStorage.getItem("ls888_mystery_visit");if(!visit){visit=crypto.randomUUID();sessionStorage.setItem("ls888_mystery_visit",visit);}
       const {data,error}=await supabase.rpc("mystery_drop",{p_visit:visit});if(error)throw error;
-      const m=data as {id:string;code:string;size:string|null;used:boolean};if(m.used){setMysteryDone(true);setMysteryBusy(false);return;}
+      const m=data as {id:string;code:string;size:string|null;used:boolean};if(m.used){setMysteryDone(true);setMysteryBusy(false);store.flashLcd("ONE COIN\nPER VISIT");later(close,600);return;}
       for(let i=0;i<24;i++)later(()=>setRoulette(`${"ABCD"[Math.floor((i%16)/4)]}${i%4+1}`),Math.round(3000*(i/24)**1.6));
-      later(()=>{setRoulette(null);const key=lineKey(m.code,m.size??"",m.id);if(store.available(key)<=0){setMysteryBusy(false);close();store.flashLcd("SOLD OUT\nTRY AGAIN");return;}mysteryDropPending.current=true;addWithCoin(key);sessionStorage.setItem("ls888_mystery_done","1");setMysteryDone(true);},3000);
-    }catch{store.flashLcd("NO SIGNAL\nTRY AGAIN");setMysteryBusy(false);}
+      later(()=>{setRoulette(null);const key=lineKey(m.code,m.size??"",m.id);if(store.available(key)<=0){setMysteryBusy(false);close();store.flashLcd("SOLD OUT\nTRY AGAIN");return;}mysteryDropPending.current=true;addWithCoin(key);sessionStorage.setItem("ls888_mystery_done","1");setMysteryDone(true);later(()=>{if(mysteryDropPending.current){mysteryDropPending.current=false;setMysteryBusy(false);close();}},2500);},3000);
+    }catch{store.flashLcd("NO SIGNAL\nTRY AGAIN");setMysteryBusy(false);setRoulette(null);later(close,600);}
   };
 
   const cartItems = Object.entries(store.cart).flatMap(([code, qty]) =>
