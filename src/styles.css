@@ -1627,7 +1627,7 @@
 .kit-strip:hover { background:var(--ls-panel);color:var(--ls-orange-hot);box-shadow:0 0 22px var(--ls-orange); }
 .kit-strip.kit-mobile { display:none;top:1110px;left:860px;width:780px;height:40px;font:30px/1 VT323,monospace;border:0;background:transparent;box-shadow:none; }
 @keyframes kit-pulse { 0%,100%{opacity:.75} 50%{opacity:1;filter:brightness(1.25)} }
-@media (max-width:759px){ .kit-strip.kit-mobile{display:flex} .sale-toast{bottom:104px} }
+@media (max-width:759px){ .kit-strip:not(.kit-mobile){display:none} .kit-strip.kit-mobile{display:flex} .sale-toast{bottom:104px} }
 @media (prefers-reduced-motion: reduce){ .kit-strip{animation:none} }
 .oo-note { left:555px;top:620px;width:300px;height:240px;padding:16px 8px;font:48px/1 VT323,monospace;white-space:normal;gap:5px;transform:rotate(-5deg);pointer-events:auto;transition:left .8s,top .8s,width .8s,height .8s,font-size .8s,transform .8s,opacity .9s; }
 .oo-note small { font:25px/1.1 VT323,monospace;margin-top:10px;opacity:1; }
