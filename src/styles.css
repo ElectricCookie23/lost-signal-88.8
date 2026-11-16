@@ -1640,3 +1640,28 @@
 @keyframes note-wobble { from { transform:rotate(-6deg) translateY(-8px); } to { transform:rotate(-3deg) translateY(-12px); } }
 @media (max-width:760px) { .oo-note:not(.is-centered) { left:840px;top:940px;width:220px;height:140px;font-size:32px;gap:0; }.oo-note:not(.is-centered) small { font-size:18px;margin-top:4px; } }
 @media (prefers-reduced-motion:reduce) { .oo-note { transition:opacity .2s;animation:none!important; } }
+
+
+/* Night Log: live unlocking + Station schedule */
+.log-status { font-family: VT323, monospace; font-size: 20px; letter-spacing: 0.08em; color: var(--ls-static); }
+.log-status.is-live { color: var(--ls-orange); }
+.log-status.is-live::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--ls-orange); margin-right: 8px; box-shadow: 0 0 8px var(--ls-orange); animation: log-blink 1.4s steps(2) infinite; }
+.log-toggle { margin-top: 6px; font-family: VT323, monospace; font-size: 18px; color: var(--ls-glow); text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer; }
+.log-locked { width: 100%; aspect-ratio: 4 / 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 1px dashed rgba(143, 167, 154, 0.45); background: repeating-linear-gradient(0deg, rgba(216, 230, 223, 0.05) 0 2px, transparent 2px 4px), #050E08; font-family: VT323, monospace; color: var(--ls-static); letter-spacing: 0.14em; animation: log-flicker 3s steps(3) infinite; }
+.log-locked b { font-size: 34px; color: var(--ls-fog); font-weight: 400; letter-spacing: 0.06em; }
+.log-locked span { font-size: 17px; }
+.night-log figure.is-new img { animation: log-in 1.2s steps(6); }
+@keyframes log-blink { 50% { opacity: 0.2; } }
+@keyframes log-flicker { 0%, 100% { opacity: 0.9; } 40% { opacity: 0.6; } 70% { opacity: 1; } }
+@keyframes log-in { 0% { filter: brightness(3) contrast(0.3); opacity: 0.2; } 100% { filter: none; opacity: 1; } }
+.station-rules { margin-top: 14px; padding: 12px 14px; border: 1px dashed var(--ls-oxide); font-family: VT323, monospace; font-size: 19px; line-height: 1.35; color: var(--ls-fog); }
+.station-rules b { color: var(--ls-orange); font-weight: 400; }
+.sched { margin-top: 16px; border-top: 1px dashed var(--ls-oxide); }
+.sched-row { display: grid; grid-template-columns: 62px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px dashed rgba(78, 141, 120, 0.35); opacity: 0.75; }
+.sched-row time { font-family: VT323, monospace; font-size: 21px; color: var(--ls-glow); }
+.sched-row strong { display: block; font-family: "Archivo Black", sans-serif; text-transform: uppercase; font-size: 14px; letter-spacing: 0.02em; }
+.sched-row p { margin: 2px 0 0; font-size: 13.5px; color: var(--ls-static); }
+.sched-row.is-now { opacity: 1; background: linear-gradient(90deg, rgba(232, 105, 60, 0.14), transparent); box-shadow: inset 3px 0 0 var(--ls-orange); padding-left: 8px; }
+.sched-row.is-now time, .sched-row.is-now strong { color: var(--ls-orange); }
+.sched-row.is-now strong::after { content: " · ON AIR NOW"; font-family: VT323, monospace; font-size: 16px; letter-spacing: 0.08em; }
+@media (prefers-reduced-motion: reduce) { .log-locked, .log-status.is-live::before, .night-log figure.is-new img { animation: none; } }
