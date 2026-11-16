@@ -1673,3 +1673,7 @@
 .pocket-track span { color: var(--ls-static); }
 .pocket-track:hover, .pocket-track:focus-visible { color: var(--ls-glow); text-shadow: 0 0 8px var(--ls-glow); }
 .pocket-track.is-current { color: var(--ls-orange); }
+
+
+/* sticky bar: solid so the "Added to cart" line never sits over text */
+.holo-sticky { background: rgb(5, 24, 20); box-shadow: 0 -22px 18px -8px rgba(5, 24, 20, 0.95); }
