@@ -12,10 +12,17 @@ const FILES = {
   flicker: "/audio/sfx_flicker_on.mp3",
   neon: "/audio/loop_neon_buzz.wav",
   music: "/audio/music_lofi_bed.mp3",
-  weather: "/audio/stations/weather.mp3",
-  song: "/audio/stations/song.mp3",
-  news: "/audio/stations/news.mp3",
+  // dial stations on the Tune In screen: a ~25s slice of a station track each
+  weather: "/audio/tracks/abandoned-broadcast.mp3",
+  song: "/audio/tracks/concrete-stairwell.mp3",
+  news: "/audio/tracks/stairwell-after-3am.mp3",
 } as const;
+/** Byte ranges for the dial stations, so the intro doesn't download three full songs. */
+const SLICES: Partial<Record<string, string>> = {
+  weather: "bytes=480000-879999",
+  song: "bytes=640000-1039999",
+  news: "bytes=960000-1359999",
+};
 export type Sfx = keyof typeof FILES;
 
 const MUTE_KEY = "ls888_muted";
@@ -58,7 +65,12 @@ export function unlock(): Promise<void> {
     const a = ctx;
     loading = Promise.all([
       ...Object.entries(FILES).map(async ([k, f]) => {
-        try { buf[k as Sfx] = await a.decodeAudioData(await (await fetch(f)).arrayBuffer()); } catch { /* missing */ }
+        try {
+          const range = SLICES[k];
+          const res = await fetch(f, range ? { headers: { Range: range } } : undefined);
+          if (!res.ok) return;
+          buf[k as Sfx] = await a.decodeAudioData(await res.arrayBuffer());
+        } catch { /* missing */ }
       }),
     ]).then(() => undefined);
   }
