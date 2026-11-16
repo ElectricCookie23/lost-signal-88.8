@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { isRadioOn, onAudioChange, radio } from "@/lib/audio";
+import { currentTrack, isRadioOn, onAudioChange, radio, skipTrack } from "@/lib/audio";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchOrders } from "@/lib/orders";
@@ -20,6 +20,7 @@ export function PocketRadio({
   events: { id: string | number; text: string }[];
 }) {
   const [on, setOn] = useState(false);
+  const [track, setTrack] = useState(currentTrack().title);
   const [open, setOpen] = useState(false);
   const [card, setCard] = useState(false);
   const [i, setI] = useState(0);
@@ -29,11 +30,11 @@ export function PocketRadio({
     const check=async()=>{const {data}=await supabase.auth.getUser();if(!data.user)return;const orders=await fetchOrders(true);for(const o of orders){const step=orderStep(o.created_at);const key=`ls888_tracking_${o.id}`;const prev=localStorage.getItem(key);localStorage.setItem(key,String(step));if(step>0&&prev!==String(step)){setOrderLine(`YOUR ORDER ${o.order_no} · ${TRACKING[step-1]?.toUpperCase()}`);setTimeout(()=>setOrderLine(null),12000);break;}}};
     void check();const t=setInterval(()=>void check(),60000);return()=>clearInterval(t);
   },[]);
-  useEffect(() => onAudioChange(() => setOn(isRadioOn())), []);
+  useEffect(() => onAudioChange(() => { setOn(isRadioOn()); setTrack(currentTrack().title); }), []);
 
   const latest = events[0];
   const lines = [
-    "NOW PLAYING: Dead Air Vol. 1, Side B",
+    `NOW PLAYING: ${track.toUpperCase()}`,
     `${listeners} ${listeners === 1 ? "LISTENER" : "LISTENERS"} TUNED IN`,
     ...(latest ? [latest.text.toUpperCase()] : []),
   ];
@@ -63,6 +64,9 @@ export function PocketRadio({
         <div className="pocket-grille" aria-hidden />
         <button type="button" className="pocket-play" aria-label={on ? "Pause station music" : "Play station music"} onClick={() => void radio(!on)}>
           {on ? "❚❚" : "▶"}
+        </button>
+        <button type="button" className="pocket-play pocket-skip" aria-label="Next track" title="Next track" onClick={() => { skipTrack(1); setI(0); }}>
+          ⏭
         </button>
         <button type="button" className="pocket-read" aria-expanded={open} aria-label="Show last events" onClick={() => setOpen((o) => !o)}>
           <span className="pocket-dial">88.8</span>
