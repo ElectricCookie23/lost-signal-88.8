@@ -1665,3 +1665,11 @@
 .sched-row.is-now time, .sched-row.is-now strong { color: var(--ls-orange); }
 .sched-row.is-now strong::after { content: " · ON AIR NOW"; font-family: VT323, monospace; font-size: 16px; letter-spacing: 0.08em; }
 @media (prefers-reduced-motion: reduce) { .log-locked, .log-status.is-live::before, .night-log figure.is-new img { animation: none; } }
+
+
+/* Pocket radio track list */
+.pocket-tracks-head { font-size: 15px; letter-spacing: 0.14em; color: var(--ls-static); }
+.pocket-track { all: unset; box-sizing: border-box; display: flex; gap: 10px; width: 100%; cursor: pointer; color: var(--ls-fog); }
+.pocket-track span { color: var(--ls-static); }
+.pocket-track:hover, .pocket-track:focus-visible { color: var(--ls-glow); text-shadow: 0 0 8px var(--ls-glow); }
+.pocket-track.is-current { color: var(--ls-orange); }
