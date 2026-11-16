@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CALLS, PRODUCT_BY_CODE, ROW_NAMES, cartTotals, type RowLetter } from "@/data/products";
 import type { MachineStore } from "@/hooks/use-machine-store";
 import { cn } from "@/lib/utils";
+import { brownoutActive } from "@/components/intro/NightEvents";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchOrders, fmtDate, lastShipping, rememberShipping, type Order, type Shipping } from "@/lib/orders";
 import { downloadReceipt } from "@/lib/receipt-pdf";
@@ -570,7 +571,7 @@ function CartView({ store, onClose, note, onCheckout }: { store: MachineStore; o
       <div className="holo-sum">
         <div><span>SUBTOTAL</span><span>{subtotal.toFixed(2)}</span></div>
         {clock.dead && <div><span>DEAD HOURS −15%</span></div>}
-        {store.kicked && <div><span>KICKIT −10%</span></div>}
+        {store.kicked && <div><span>{brownoutActive() ? "BROWNOUT −10%" : "KICKIT −10%"}</span></div>}
         {lines.some(([k])=>readLine(k).mystery) && <div><span>MYSTERY −20%</span></div>}
         {discount>0 && <div><span>DISCOUNT (MAX 25%)</span><span>−{discount.toFixed(2)}</span></div>}
         <div><span>SHIPPING (QATAR)</span><span>FREE</span></div>
