@@ -12,6 +12,7 @@ const FILES = {
   flicker: "/audio/sfx_flicker_on.mp3",
   neon: "/audio/loop_neon_buzz.wav",
   music: "/audio/music_lofi_bed.mp3",
+  ring: "/audio/sfx_phone_ring.mp3",
   // dial stations on the Tune In screen: a ~25s slice of a station track each
   weather: "/audio/tracks/abandoned-broadcast.mp3",
   song: "/audio/tracks/concrete-stairwell.mp3",
@@ -99,6 +100,58 @@ export function fadeOut(v: Voice | null, t = 1) {
   v.gain.gain.setValueAtTime(v.gain.gain.value, c);
   v.gain.gain.linearRampToValueAtTime(0, c + t);
   try { v.src.stop(c + t + 0.05); } catch { /* already stopped */ }
+}
+
+/** Morse-style beeps for the line 2 call: "." short, "-" long, " " gap. Returns total seconds. */
+export function beeps(pattern: string, vol = 0.18): number {
+  if (!ctx || !master) return 0;
+  let t = ctx.currentTime + 0.05;
+  for (const ch of pattern) {
+    if (ch === " ") { t += 0.32; continue; }
+    const len = ch === "-" ? 0.27 : 0.09;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 742;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.01);
+    g.gain.setValueAtTime(vol, t + len - 0.01);
+    g.gain.linearRampToValueAtTime(0, t + len);
+    osc.connect(g).connect(master);
+    osc.start(t);
+    osc.stop(t + len + 0.02);
+    t += len + 0.09;
+  }
+  return t - ctx.currentTime;
+}
+
+/** Deep power-cut thud. */
+export function thud(vol = 0.9) {
+  if (!ctx || !master) return;
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(90, t);
+  osc.frequency.exponentialRampToValueAtTime(32, t + 0.6);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
+  osc.connect(g).connect(master);
+  osc.start(t);
+  osc.stop(t + 1);
+}
+
+/** Power cut: thud, then everything (music, hum) drops to near silence for `sec` and swells back. */
+export function blackout(sec = 6) {
+  if (!ctx || !master) return;
+  thud();
+  if (muted) return;
+  const t = ctx.currentTime;
+  master.gain.cancelScheduledValues(t);
+  master.gain.setValueAtTime(1, t + 0.45);
+  master.gain.linearRampToValueAtTime(0.03, t + 0.7);
+  master.gain.setValueAtTime(0.03, t + sec);
+  master.gain.linearRampToValueAtTime(1, t + sec + 1.2);
 }
 
 /** Tiny 70ms static slice: printer clicks, flicker ticks. */
