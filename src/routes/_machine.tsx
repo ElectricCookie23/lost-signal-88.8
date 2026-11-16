@@ -38,6 +38,7 @@ import { OutOfOrderNote, SignDark } from "@/components/intro/MachineExtras";
 import { useOnAir } from "@/hooks/use-on-air";
 import { click, fadeOut, humOn, humSpatial, initMute, lockIn, play, radio, setMuted, tunerStop, unlock, type Voice } from "@/lib/audio";
 import { Flashlight } from "@/components/intro/Flashlight";
+import { Line2, PowerCut } from "@/components/intro/NightEvents";
 import { secretMatch } from "@/lib/secret";
 import { PRODUCT_BY_CODE, ROW_SLUGS } from "@/data/products";
 import { MOBILE_TICKER, SLOT_COLS, SLOT_ROWS, type CameraMode } from "@/lib/machine-layout";
@@ -595,6 +596,21 @@ function Machine() {
         onAir={onAir}
       />
       <PocketRadio hidden={!barOn} listeners={station.listeners} events={station.events} />
+      <Line2
+        active={barOn && onAir && phase === "on"}
+        onReveal={() => store.flashLcd("D4 · A1 · D4\nTRY IT", 7000)}
+        onMissed={() => store.flashLcd("MISSED CALL\nLINE 2", 3000)}
+      />
+      <PowerCut
+        active={barOn && onAir && phase === "on"}
+        onRestore={() => {
+          // brownout prices ride on the existing 10% "kicked" discount for 60 seconds
+          const already = store.kicked;
+          if (!already) store.setKicked(true);
+          store.flashLcd("BROWNOUT\n10% OFF · 60s", 5000);
+          if (!already) later(() => { store.setKicked(false); store.flashLcd("POWER\nSTABLE", 2500); }, 60000);
+        }}
+      />
       <LiveStrip hidden={!barOn} listeners={station.listeners} events={station.events} toast={station.toast} onProduct={openProduct} notice={[weather==="rain"?"RAINING IN DOHA · RARE NIGHT":"",clock.dead?"DEAD HOURS · 15% OFF":!onAir?"OFF AIR · BACK AT 8PM":""].filter(Boolean).join(" ✦ ")} />
       <Gate
         hidden={phase !== "gate"}
